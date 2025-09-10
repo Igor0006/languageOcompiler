@@ -1,0 +1,7 @@
+class Box is
+    var flag : Boolean(true)
+    var x : Integer(10)
+    var y : Real(3.14)
+    // var z : Integer(5)
+    method Get() : Array[Integer] => this
+end

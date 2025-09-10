@@ -201,18 +201,39 @@ namespace Compiler.Lex
 
     internal static class Demo
     {
-        public static void Main()
+        public static void Main(string[] args)
         {
-            var src = @"class Box is
-    var flag : Boolean(true)
-    var x : Integer(10)
-    var y : Real(3.14)
-    // This is a comment
-    method Get() : Array[Integer] => this
-end";
+           Console.WriteLine($"{tok.Type} '{tok.Lexeme}' at {tok.Line}:{tok.Column}");
 
-            foreach (var tok in new Lexer(src).Tokenize())
-                Console.WriteLine($"{tok.Type} '{tok.Lexeme}' at {tok.Line}:{tok.Column}");
+            if (args.Length == 0)
+            {
+                Console.WriteLine("Usage: OCompiler <filename.o>");
+                return;
+            }
+
+            string filename = args[0];
+            
+            try
+            {
+                string sourceCode = File.ReadAllText(filename);
+                
+                Lexer lexer = new Lexer(sourceCode);
+                var tokens = lexer.Tokenize();
+                
+                foreach (var token in tokens)
+                {
+                    Console.WriteLine($"{token.Type} '{token.Lexeme}' at {token.Line}:{token.Column}");
+                }
+            }
+            catch (FileNotFoundException)
+            {
+                Console.WriteLine($"Error: File '{filename}' not found.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error: {ex.Message}");
+            }
+
         }
     }
 }
