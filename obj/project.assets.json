@@ -8,19 +8,19 @@
     "net9.0": []
   },
   "packageFolders": {
-    "C:\\Users\\aidar\\.nuget\\packages\\": {}
+    "/Users/igor/.nuget/packages/": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Projects\\Csharp\\compiler\\compiler.csproj",
+      "projectUniqueName": "/Users/igor/otherShit/languageOcompiler/compiler.csproj",
       "projectName": "compiler",
-      "projectPath": "C:\\Projects\\Csharp\\compiler\\compiler.csproj",
-      "packagesPath": "C:\\Users\\aidar\\.nuget\\packages\\",
-      "outputPath": "C:\\Projects\\Csharp\\compiler\\obj\\",
+      "projectPath": "/Users/igor/otherShit/languageOcompiler/compiler.csproj",
+      "packagesPath": "/Users/igor/.nuget/packages/",
+      "outputPath": "/Users/igor/otherShit/languageOcompiler/obj/",
       "projectStyle": "PackageReference",
       "configFilePaths": [
-        "C:\\Users\\aidar\\AppData\\Roaming\\NuGet\\NuGet.Config"
+        "/Users/igor/.nuget/NuGet/NuGet.Config"
       ],
       "originalTargetFrameworks": [
         "net9.0"
@@ -65,7 +65,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.305/PortableRuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/9.0.305/PortableRuntimeIdentifierGraph.json"
       }
     }
   }
