@@ -1,4 +1,4 @@
-namespace OCompiler.Lex
+namespace Compiler.Lex
 {
     public enum TokenType
     {
