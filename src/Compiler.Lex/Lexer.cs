@@ -203,8 +203,6 @@ namespace Compiler.Lex
     {
         public static void Main(string[] args)
         {
-           Console.WriteLine($"{tok.Type} '{tok.Lexeme}' at {tok.Line}:{tok.Column}");
-
             if (args.Length == 0)
             {
                 Console.WriteLine("Usage: OCompiler <filename.o>");
