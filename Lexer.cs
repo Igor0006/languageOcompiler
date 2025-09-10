@@ -6,17 +6,21 @@ namespace OCompiler.Lex
         KW_CLASS, KW_EXTENDS, KW_IS, KW_END, KW_VAR, KW_METHOD,
         KW_THIS, KW_RETURN, KW_WHILE, KW_LOOP, KW_IF, KW_THEN, KW_ELSE,
 
-        // Identifiers and literals
-        IDENT, INT_LITERAL,
+        // Literals / identifiers
+        IDENT,
+        INT_LITERAL,
+        REAL_LITERAL,   // e.g., 3.14, 2.0, 1e5, 6.02E23
+        BOOL_LITERAL,   // true / false
 
         // Single-character symbols
         LPAREN, RPAREN, COLON, DOT, COMMA,
+        LBRACKET, RBRACKET, // [ ]
 
         // Multi-character operators
         ASSIGN,   // :=
         ARROW,    // =>
 
-        // Special tokens
+        // Special
         EOF, ILLEGAL
     }
 
@@ -24,10 +28,10 @@ namespace OCompiler.Lex
 
     public sealed class Lexer
     {
-        private readonly string _s; // Input source code
-        private int _i;             // Current position in the input
+        private readonly string _s; // input source
+        private int _i;             // current index
 
-        // Map of keywords to their token types
+        // Keywords (without true/false — we’ll map them to BOOL_LITERAL explicitly)
         private static readonly Dictionary<string, TokenType> KW = new()
         {
             ["class"]=TokenType.KW_CLASS, ["extends"]=TokenType.KW_EXTENDS,
@@ -38,92 +42,123 @@ namespace OCompiler.Lex
             ["then"]=TokenType.KW_THEN, ["else"]=TokenType.KW_ELSE
         };
 
-        public Lexer(string src) {
-            _s = src ?? "";
-        } 
+        public Lexer(string src) { _s = src ?? ""; }
 
-        // Tokenize the entire source into a sequence of tokens
+        // Tokenize the whole input
         public IEnumerable<Token> Tokenize()
         {
             Token t;
-            do
-            {
-                t = Next();       // get the next token
-                yield return t;
-            } while (t.Type != TokenType.EOF);
+            do { t = Next(); yield return t; } while (t.Type != TokenType.EOF);
         }
 
-        // Read the next token from the source
+        // Produce next token
         private Token Next()
         {
-            SkipWS(); // skip whitespace
-
+            SkipWS();
             if (Eof) return new(TokenType.EOF, "");
 
             char c = Peek;
 
-            // Multi-character tokens
+            // Multi-char operators first
             if (c == ':' && Look(":=")) return Take(TokenType.ASSIGN, 2, ":=");
             if (c == '=' && Look("=>")) return Take(TokenType.ARROW, 2, "=>");
 
-            // Single-character tokens
-            if (c == '(') return Take(TokenType.LPAREN, 1, "(");
-            if (c == ')') return Take(TokenType.RPAREN, 1, ")");
-            if (c == ':') return Take(TokenType.COLON,  1, ":");
-            if (c == '.') return Take(TokenType.DOT,    1, ".");
-            if (c == ',') return Take(TokenType.COMMA,  1, ",");
+            // Single-char symbols
+            if (c == '(') return Take(TokenType.LPAREN,   1, "(");
+            if (c == ')') return Take(TokenType.RPAREN,   1, ")");
+            if (c == ':') return Take(TokenType.COLON,    1, ":");
+            if (c == '.') return Take(TokenType.DOT,      1, ".");
+            if (c == ',') return Take(TokenType.COMMA,    1, ",");
+            if (c == '[') return Take(TokenType.LBRACKET, 1, "[");
+            if (c == ']') return Take(TokenType.RBRACKET, 1, "]");
 
-            // Identifier or keyword
+            // Identifier / keyword / boolean literal
             if (char.IsLetter(c) || c == '_')
             {
                 int start = _i;
                 while (!Eof && (char.IsLetterOrDigit(Peek) || Peek == '_')) _i++;
                 string lex = _s[start.._i];
 
-                if (KW.TryGetValue(lex, out var kw)) // keyword?
+                // true/false as BOOL_LITERAL
+                if (lex == "true" || lex == "false")
+                    return new(TokenType.BOOL_LITERAL, lex);
+
+                // keywords
+                if (KW.TryGetValue(lex, out var kw))
                     return new(kw, lex);
-                return new(TokenType.IDENT, lex);    // otherwise identifier
+
+                // otherwise identifier
+                return new(TokenType.IDENT, lex);
             }
 
-            // Integer literal
+            // Number: INT or REAL (simple rules: optional fraction and/or exponent)
             if (char.IsDigit(c))
             {
                 int start = _i;
+
+                // integer part
                 while (!Eof && char.IsDigit(Peek)) _i++;
-                return new(TokenType.INT_LITERAL, _s[start.._i]);
+
+                bool isReal = false;
+
+                // fraction: '.' followed by at least one digit
+                if (!Eof && Peek == '.' && (_i + 1 < _s.Length) && char.IsDigit(_s[_i + 1]))
+                {
+                    isReal = true;
+                    _i++; // consume '.'
+                    while (!Eof && char.IsDigit(Peek)) _i++;
+                }
+
+                // exponent: e/E (+/-)? digits+
+                if (!Eof && (Peek == 'e' || Peek == 'E'))
+                {
+                    int save = _i;
+                    _i++; // consume e/E
+
+                    if (!Eof && (Peek == '+' || Peek == '-')) _i++;
+
+                    if (!Eof && char.IsDigit(Peek))
+                    {
+                        isReal = true;
+                        while (!Eof && char.IsDigit(Peek)) _i++;
+                    }
+                    else
+                    {
+                        // not a valid exponent → roll back
+                        _i = save;
+                    }
+                }
+
+                string numLex = _s[start.._i];
+                return new(isReal ? TokenType.REAL_LITERAL : TokenType.INT_LITERAL, numLex);
             }
 
-            // Unknown/illegal character
+            // Unknown character
             _i++;
             return new(TokenType.ILLEGAL, c.ToString());
         }
 
-        // Helper methods
+        // ---- helpers ----
 
-        // Skip all whitespace characters
+        // Skip whitespace (spaces, tabs, newlines)
         private void SkipWS()
         {
             while (!Eof && char.IsWhiteSpace(Peek)) _i++;
         }
 
-        // Check if the next characters match a given pattern (":=" or "=>")
+        // Look ahead for an exact pattern starting at current index
         private bool Look(string pattern)
         {
-            if (_i + 1 >= _s.Length) return false;
-            return _s.Substring(_i, pattern.Length) == pattern;
+            int remaining = _s.Length - _i;
+            if (remaining < pattern.Length) return false;
+            return string.CompareOrdinal(_s, _i, pattern, 0, pattern.Length) == 0;
         }
 
-        // Create a token and advance the cursor
-        private Token Take(TokenType t, int n, string lex)
-        {
-            _i += n;
-            return new(t, lex);
-        }
+        // Emit token and advance by n characters
+        private Token Take(TokenType t, int n, string lex) { _i += n; return new(t, lex); }
 
-        // Checks
+        // State & accessors
         private bool Eof => _i >= _s.Length;
-
-        // Current character (or '\0' at end of file)
         private char Peek => Eof ? '\0' : _s[_i];
     }
 
@@ -132,8 +167,10 @@ namespace OCompiler.Lex
         public static void Main()
         {
             var src = @"class Box is
-    var val : Integer(0)
-    method Get() : Integer => val
+    var flag : Boolean(true)
+    var x : Integer(10)
+    var y : Real(3.14)
+    method Get() : Array[Integer] => this
 end";
 
             foreach (var tok in new Lexer(src).Tokenize())
