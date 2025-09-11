@@ -52,10 +52,12 @@ namespace Compiler.Lex
             _column = 1;
         }
 
-        public IEnumerable<Token> Tokenize()
+        public List<Token> Tokenize()
         {
+            var tokens = new List<Token>();
             Token t;
-            do { t = Next(); yield return t; } while (t.Type != TokenType.EOF);
+            do { t = Next(); tokens.Add(t); } while (t.Type != TokenType.EOF);
+            return tokens;
         }
 
         // Produce next token
