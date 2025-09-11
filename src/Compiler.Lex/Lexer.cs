@@ -205,7 +205,7 @@ namespace Compiler.Lex
         {
             if (args.Length == 0)
             {
-                Console.WriteLine("Usage: OCompiler <filename.o>");
+                Console.WriteLine("Usage: dotnet run -- <filename.o>");
                 return;
             }
 
