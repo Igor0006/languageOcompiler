@@ -1,46 +1,30 @@
-/* Compiler.Parser/OParser.y */
 %namespace Compiler.Parser
-%using QUT.Gppg
-%using Compiler.Parse
-%using Compiler.Ast
-
 %parsertype Parser
 %visibility public
-%scanner Scanner          // ← имя адаптера
-%tokentype SemVal         // ← тип yylval
-%YYLTYPE LexLocation
+%tokentype Tokens
+%YYSTYPE Compiler.Parser.SemVal
 
-// Терминалы: ИМЕНА должны совпадать с теми, что возвращает Scanner
-%token KW_VAR
-%token IDENT INT_LITERAL
-%token COLON
-%token EOF
+%using Compiler.Ast
 
-%type <ProgramNode> Program
-%type <VarDecl>     VarDecl
-%type <string>      Id
-%type <long>        Int
+%token KW_VAR IDENT COLON INT_LITERAL EOF
 
 %%
 
 Program
-    : VarDecl EOF
-      { $$ = new ProgramNode($1); }
-    ;
-
-VarDecl
-    : KW_VAR Id COLON Int
-      { $$ = new VarDecl($2, $4); }
-    ;
-
-Id
-    : IDENT { $$ = $1.Id; }
-    ;
-
-Int
-    : INT_LITERAL { $$ = $1.IntVal.Value; }
+    : KW_VAR IDENT COLON INT_LITERAL EOF
+        {
+            var name = $2.Id ?? throw new InvalidOperationException("Identifier missing");
+            var value = $4.IntVal ?? throw new InvalidOperationException("Integer literal missing");
+            Result = new ProgramNode(new VarDecl(name, value));
+        }
     ;
 
 %%
-/* Парсер сгенерирует public ProgramNode result; присваиваем внизу: */
-public override ProgramNode ParseResult => result;
+
+public Parser(Scanner scanner) : base(scanner) { }
+
+public Parser() : base(null) { }
+
+#nullable enable
+public ProgramNode? Result { get; private set; }
+#nullable restore

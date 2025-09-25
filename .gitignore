@@ -6,6 +6,10 @@
 # dotenv files
 .env
 
+# gppg
+*.lst
+*.report.html
+
 # User-specific files
 *.rsuser
 *.suo

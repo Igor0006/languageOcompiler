@@ -1,44 +1,51 @@
 using System;
+using System.Globalization;
 using System.IO;
-using QUT.Gppg;            // LexLocation
-using Compiler.Lex;       // твой Lexer/Token/TokenType
-using Compiler.Parse;     // SemVal
+using Compiler.Lex;
+using StarodubOleg.GPPG.Runtime;
 
 namespace Compiler.Parser
 {
     // Имя класса должно совпадать с %scanner в .y
-    public sealed class Scanner
+    public sealed class Scanner : AbstractScanner<SemVal, LexLocation>
     {
-        private readonly Lexer _lx;
-
-        // gppg будет читать эти поля:
-        public SemVal yylval;
-        public LexLocation yylloc;
+        private readonly Lexer _lexer;
 
         public Scanner(TextReader reader)
         {
             var src = reader.ReadToEnd();
-            _lx = new Lexer(src);
+            _lexer = new Lexer(src);
+            yylloc = new LexLocation(1, 1, 1, 1);
         }
 
-        public int yylex()
+        public override int yylex()
         {
-            var t = _lx.NextTokenPublic(); // см. ниже: сделай публичным Next() или добавь NextTokenPublic()
+            var token = _lexer.Next();
 
-            int sl = t.Line, sc = t.Column;
-            int el = t.Line, ec = t.Column + Math.Max(1, t.Lexeme?.Length ?? 0);
+            int sl = token.Line;
+            int sc = token.Column;
+            int length = Math.Max(1, token.Lexeme?.Length ?? 0);
+            int el = token.Line;
+            int ec = token.Column + length;
             yylloc = new LexLocation(sl, sc, el, ec);
 
-            switch (t.Type)
+            switch (token.Type)
             {
-                case TokenType.KW_VAR: return (int)Tokens.KW_VAR;
-                case TokenType.IDENT: yylval = SemVal.FromId(t.Lexeme); return (int)Tokens.IDENT;
-                case TokenType.COLON: return (int)Tokens.COLON;
-                case TokenType.INT_LITERAL: yylval = SemVal.FromInt(long.Parse(t.Lexeme)); return (int)Tokens.INT_LITERAL;
-                case TokenType.EOF: return (int)Tokens.EOF;
+                case TokenType.KW_VAR:
+                    return (int)Tokens.KW_VAR;
+                case TokenType.IDENT:
+                    yylval = SemVal.FromId(token.Lexeme ?? string.Empty);
+                    return (int)Tokens.IDENT;
+                case TokenType.COLON:
+                    return (int)Tokens.COLON;
+                case TokenType.INT_LITERAL:
+                    yylval = SemVal.FromInt(long.Parse(token.Lexeme ?? "0", CultureInfo.InvariantCulture));
+                    return (int)Tokens.INT_LITERAL;
+                case TokenType.EOF:
+                    return (int)Tokens.EOF;
 
                 default:
-                    throw new Exception($"Unexpected token {t.Type} '{t.Lexeme}' at {sl}:{sc}");
+                    throw new Exception($"Unexpected token {token.Type} '{token.Lexeme}' at {sl}:{sc}");
             }
         }
     }

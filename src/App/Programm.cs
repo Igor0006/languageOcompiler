@@ -15,8 +15,14 @@ class Entry
 
         if (parser.Parse())
         {
-            ProgramNode ast = parser.result; // или parser.ParseResult, см. низ .y
-            Console.WriteLine($"Parsed OK: var {ast.Decl.Name} : {ast.Decl.Value}");
+            if (parser.Result is ProgramNode ast)
+            {
+                Console.WriteLine($"Parsed OK: var {ast.Decl.Name} : {ast.Decl.Value}");
+            }
+            else
+            {
+                Console.WriteLine("Parse succeeded but no AST produced");
+            }
         }
         else
         {

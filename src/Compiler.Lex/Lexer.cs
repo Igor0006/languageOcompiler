@@ -201,39 +201,4 @@ namespace Compiler.Lex
         private char Peek => Eof ? '\0' : _s[_i];
     }
 
-    internal static class Demo
-    {
-        public static void Main(string[] args)
-        {
-            if (args.Length == 0)
-            {
-                Console.WriteLine("Usage: dotnet run -- <filename.o>");
-                return;
-            }
-
-            string filename = args[0];
-            
-            try
-            {
-                string sourceCode = File.ReadAllText(filename);
-                
-                Lexer lexer = new Lexer(sourceCode);
-                var tokens = lexer.Tokenize();
-                
-                foreach (var token in tokens)
-                {
-                    Console.WriteLine($"{token.Type} '{token.Lexeme}' at {token.Line}:{token.Column}");
-                }
-            }
-            catch (FileNotFoundException)
-            {
-                Console.WriteLine($"Error: File '{filename}' not found.");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error: {ex.Message}");
-            }
-
-        }
-    }
 }
