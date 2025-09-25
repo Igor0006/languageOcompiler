@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Springcomp.GPPG.Runtime" Version="1.2.4" />
+    <PackageReference Include="YaccLexTools.Gppg" Version="1.5.3.1" PrivateAssets="all" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <ProjectDir>$(MSBuildThisFileDirectory)</ProjectDir>
+
+    <ParserDir Condition="Exists('$(ProjectDir)Compiler.Parser')">$(ProjectDir)Compiler.Parser</ParserDir>
+    <ParserDir Condition="'$(ParserDir)'=='' and Exists('$(ProjectDir)src/Compiler.Parser')">$(ProjectDir)src/Compiler.Parser</ParserDir>
+
+    <GppgDll>$(NuGetPackageRoot)yacclextools.gppg\1.5.3.1\tools\net8.0\any\gppg.dll</GppgDll>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="$(ProjectDir)**/*.cs" />
+    <None Include="$(ParserDir)/OParser.y" Condition="Exists('$(ParserDir)/OParser.y')" />
+  </ItemGroup>
+
+  <Target Name="GenerateParser"
+          Inputs="$(ParserDir)/OParser.y"
+          Outputs="$(ParserDir)/OParser.g.cs"
+          BeforeTargets="BeforeCompile"
+          Condition="Exists('$(ParserDir)/OParser.y')">
+    <Message Text="Generating parser in: $(ParserDir)" Importance="high" />
+    <Message Text="Using gppg: $(GppgDll)" Importance="high" />
+
+    <Exec WorkingDirectory="$(ParserDir)"
+          Command="dotnet exec &quot;$(GppgDll)&quot; /out:OParser.g.cs OParser.y" />
+
+    <ItemGroup>
+      <Compile Include="$(ParserDir)/OParser.g.cs" />
+    </ItemGroup>
+  </Target>
+
+</Project>

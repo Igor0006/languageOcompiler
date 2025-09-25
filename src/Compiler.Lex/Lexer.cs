@@ -61,7 +61,7 @@ namespace Compiler.Lex
         }
 
         // Produce next token
-        private Token Next()
+        public Token Next()
         {
             SkipWSAndComments();
             if (Eof) return new(TokenType.EOF, "", _line, _column);
