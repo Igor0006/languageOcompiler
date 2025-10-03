@@ -1,17 +1,28 @@
+using System.Collections.Generic;
+
+
 namespace Compiler.Ast
 {
     // =========================================================================
     // БАЗОВЫЕ ТИПЫ
     // =========================================================================
 
-    public abstract record Node
+    // Любой узел AST хранит положение (строка/колонка) и поддерживает Visitor.
+    public abstract partial record Node
     {
         public int Line { get; init; }
         public int Column { get; init; }
+
+        public abstract T Accept<T>(IAstVisitor<T> visitor);
     }
 
+    // Элемент тела метода/конструктора:
+    // - оператор (Statement)
+    // - локальная переменная (VariableDeclarationNode)
+    public interface IBodyItem { }
+
     public abstract record Expression : Node;
-    public abstract record Statement : Node;
+    public abstract record Statement : Node, IBodyItem;
     public abstract record Type : Node;
     public abstract record Member : Node;
 
@@ -19,141 +30,349 @@ namespace Compiler.Ast
     // ПРОГРАММА И КЛАССЫ
     // =========================================================================
 
-    // Программа - последовательность объявлений классов
-    public record ProgramNode(List<ClassNode> Classes) : Node;
+    // Пример O:
+    //   class A is
+    //       var x : Integer(5)
+    //   end
+    //
+    // AST-корень хранит список объявлений классов: [ClassNode("A", ...)]
 
-    // Объявление класса
-    public record ClassNode(
+    public record VarDecl(string Name, long Value);
+
+    public partial record ProgramNode(List<ClassNode> Classes) : Node
+    {
+        public ProgramNode(VarDecl decl) : this(new List<ClassNode>())
+        {
+            Decl = decl;
+        }
+        public VarDecl? Decl { get; init; }
+        public override T Accept<T>(IAstVisitor<T> visitor) => visitor.Visit(this);
+    }
+
+    // Объявление класса.
+    //
+    // Пример O (без наследования):
+    //   class A is ... end
+    //
+    // Пример O (с наследованием):
+    //   class B extends A is ... end
+    //
+    // AST:
+    //   new ClassNode(Name:"B", BaseClass:"A", Members:[...])
+    public partial record ClassNode(
         string Name,
         string? BaseClass,          // null если нет наследования
         List<Member> Members
-    ) : Node;
+    ) : Node
+    {
+        public override T Accept<T>(IAstVisitor<T> visitor) => visitor.Visit(this);
+    }
 
     // =========================================================================
     // ЧЛЕНЫ КЛАССА
     // =========================================================================
 
-    // Объявление переменной
-    public record VariableDeclarationNode(
+    // Объявление переменной класса или локальной (в теле) — по спецификации O:
+    //   VariableDeclaration : var Identifier : Expression
+    //
+    // ВАЖНО: двоеточие отделяет имя от ИНИЦИАЛИЗАТОРА, а не тип!
+    // Тип выводится из выражения (на семантическом проходе),
+    // поэтому в AST нет обязательного поля "Type" из исходника.
+    //
+    // Пример O:
+    //   var x : Integer(5)      // литерал Integer(5)
+    //   var b : Boolean(true)
+    //
+    // AST:
+    //   new VariableDeclarationNode("x", new ConstructorCallNode("Integer",[IntLiteral(5)]))
+    //   new VariableDeclarationNode("b", new ConstructorCallNode("Boolean",[BoolLiteral(true)]))
+    public partial record VariableDeclarationNode(
         string Name,
-        TypeNode Type,
-        Expression InitialValue
-    ) : Member;
+        Expression InitialValue,
+        TypeNode? ResolvedType = null // для семантики (итоговый выведенный тип)
+    ) : Member, IBodyItem
+    {
+        public override T Accept<T>(IAstVisitor<T> visitor) => visitor.Visit(this);
+    }
 
-    // Объявление метода
-    public record MethodDeclarationNode(
+    // Объявление метода.
+    //
+    // Поддерживаем forward-декларации (Body == null), как в спецификации:
+    //   MethodDeclaration : MethodHeader [ MethodBody ]
+    //
+    // Примеры O заголовков:
+    //   method getX : Integer
+    //   method inc(a: Integer)
+    //   method max(a: Integer, b: Integer) : Integer
+    //
+    // Короткое тело:
+    //   method getX : Integer => x
+    //
+    // Полное тело:
+    //   method inc(a: Integer) is
+    //       x := x.Plus(a)
+    //   end
+    public partial record MethodDeclarationNode(
         string Name,
         List<ParameterNode> Parameters,
         TypeNode? ReturnType,       // null если метод не возвращает значение
-        MethodBodyNode Body
-    ) : Member;
+        MethodBodyNode? Body        // null => forward-declaration
+    ) : Member
+    {
+        public override T Accept<T>(IAstVisitor<T> visitor) => visitor.Visit(this);
+    }
 
-    // Объявление конструктора
-    public record ConstructorDeclarationNode(
+    // Объявление конструктора.
+    //
+    // Пример O:
+    //   this(p: Integer, q: Integer) is
+    //       var s : p.Plus(q)
+    //       ...
+    //   end
+    public partial record ConstructorDeclarationNode(
         List<ParameterNode> Parameters,
         BodyNode Body
-    ) : Member;
+    ) : Member
+    {
+        public override T Accept<T>(IAstVisitor<T> visitor) => visitor.Visit(this);
+    }
 
-    // Тело метода (полное или сокращенное)
-    public abstract record MethodBodyNode : Node;
-    public record ExpressionBodyNode(Expression Expression) : MethodBodyNode;
-    public record BlockBodyNode(BodyNode Body) : MethodBodyNode;
+    // Тело метода:
+    // - BlockBodyNode: "is Body end"
+    // - ExpressionBodyNode: "=> Expression" (только для методов, не для конструкторов)
+    public abstract partial record MethodBodyNode : Node
+    {
+        public override T Accept<T>(IAstVisitor<T> visitor) => visitor.Visit(this);
+    }
+
+    // "=> Expression"
+    //
+    // Пример O:
+    //   method getX : Integer => x
+    //
+    // AST:
+    //   new MethodDeclarationNode("getX", [], Integer, new ExpressionBodyNode(Identifier("x")))
+    public partial record ExpressionBodyNode(Expression Expression) : MethodBodyNode
+    {
+        public override T Accept<T>(IAstVisitor<T> visitor) => visitor.Visit(this);
+    }
+
+    // "is Body end"
+    //
+    // Пример O:
+    //   method inc(a: Integer) is
+    //       x := x.Plus(a)
+    //   end
+    public partial record BlockBodyNode(BodyNode Body) : MethodBodyNode
+    {
+        public override T Accept<T>(IAstVisitor<T> visitor) => visitor.Visit(this);
+    }
 
     // =========================================================================
     // ТИПЫ
     // =========================================================================
 
-    // Именованный тип (без generic-параметров)
-    public record TypeNode(string Name) : Type;
+    // Именованный тип (без generic-параметров; дженерики вне объёма реализации курса).
+    //
+    // Пример: Integer, Real, Boolean, Array, List ...
+    public partial record TypeNode(string Name) : Type
+    {
+        public override T Accept<T>(IAstVisitor<T> visitor) => visitor.Visit(this);
+    }
 
-    // Параметр метода/конструктора
-    public record ParameterNode(
+    // Параметр метода/конструктора:
+    //
+    // Пример O:
+    //   method inc(a: Integer)
+    //                  ^------ ParameterNode("a", TypeNode("Integer"))
+    public partial record ParameterNode(
         string Name,
         TypeNode Type
-    ) : Node;
+    ) : Node
+    {
+        public override T Accept<T>(IAstVisitor<T> visitor) => visitor.Visit(this);
+    }
 
     // =========================================================================
     // ТЕЛО МЕТОДА/КОНСТРУКТОРА
     // =========================================================================
 
-    // Тело (блок кода)
-    public record BodyNode(
-        List<Statement> Statements
-    ) : Node;
+    // Body — это список "элементов тела": локальные var И/ИЛИ операторы.
+    //
+    // Пример O:
+    //   method foo is
+    //       var i : Integer(1)          // VariableDeclarationNode
+    //       while i.Less(10) loop       // WhileLoopNode
+    //           i := i.Plus(1)          // AssignmentNode
+    //       end
+    //   end
+    public partial record BodyNode(
+        List<IBodyItem> Items
+    ) : Node
+    {
+        public override T Accept<T>(IAstVisitor<T> visitor) => visitor.Visit(this);
+    }
 
     // =========================================================================
     // ОПЕРАТОРЫ (STATEMENTS)
     // =========================================================================
 
-    // Присваивание
-    public record AssignmentNode(
-        string VariableName,
+    // Присваивание.
+    //
+    // Спецификация даёт форму "Identifier := Expression".
+    // На практике удобно разрешить слева также MemberAccess (this.x).
+    //
+    // Примеры O:
+    //   x := Integer(5)
+    //   this.x := x.Plus(1)
+    //
+    // AST:
+    //   new AssignmentNode(Identifier("x"), ConstructorCall("Integer",[Int(5)]))
+    //   new AssignmentNode(MemberAccess(This(),"x"), Call(MemberAccess(Identifier("x"),"Plus"), [Int(1)]))
+    public partial record AssignmentNode(
+        Expression Target,
         Expression Value
-    ) : Statement;
+    ) : Statement
+    {
+        public override T Accept<T>(IAstVisitor<T> visitor) => visitor.Visit(this);
+    }
 
-    // Цикл while
-    public record WhileLoopNode(
+    // Цикл while:
+    //
+    // Пример O:
+    //   while i.LessEqual(n) loop
+    //       ...
+    //   end
+    //
+    // AST:
+    //   new WhileLoopNode(cond: Call(MemberAccess(Id("i"),"LessEqual"), [Id("n")]), body: ...)
+    public partial record WhileLoopNode(
         Expression Condition,
         BodyNode Body
-    ) : Statement;
+    ) : Statement
+    {
+        public override T Accept<T>(IAstVisitor<T> visitor) => visitor.Visit(this);
+    }
 
-    // Условный оператор if
-    public record IfStatementNode(
+    // Условный оператор if:
+    //
+    // Примеры O:
+    //   if b then
+    //       ...
+    //   end
+    //
+    //   if a.Greater(b) then
+    //       ...
+    //   else
+    //       ...
+    //   end
+    public partial record IfStatementNode(
         Expression Condition,
         BodyNode ThenBranch,
         BodyNode? ElseBranch        // null если нет else
-    ) : Statement;
+    ) : Statement
+    {
+        public override T Accept<T>(IAstVisitor<T> visitor) => visitor.Visit(this);
+    }
 
-    // Возврат из метода
-    public record ReturnStatementNode(
+    // Возврат из метода:
+    //
+    // Примеры O:
+    //   return
+    //   return x
+    public partial record ReturnStatementNode(
         Expression? Value           // null если return без значения
-    ) : Statement;
+    ) : Statement
+    {
+        public override T Accept<T>(IAstVisitor<T> visitor) => visitor.Visit(this);
+    }
 
     // =========================================================================
     // ВЫРАЖЕНИЯ (EXPRESSIONS)
     // =========================================================================
 
-    // Базовые литералы
-    public record IntegerLiteralNode(int Value) : Expression;
-    public record RealLiteralNode(double Value) : Expression;
-    public record BooleanLiteralNode(bool Value) : Expression;
+    // Литералы библиотечных типов. Лексическая форма — по твоему лексеру.
+    public partial record IntegerLiteralNode(int Value) : Expression
+    {
+        public override T Accept<T>(IAstVisitor<T> visitor) => visitor.Visit(this);
+    }
 
-    // Идентификатор (имя переменной)
-    public record IdentifierNode(string Name) : Expression;
+    public partial record RealLiteralNode(double Value) : Expression
+    {
+        public override T Accept<T>(IAstVisitor<T> visitor) => visitor.Visit(this);
+    }
 
-    // Ключевое слово 'this'
-    public record ThisNode() : Expression;
+    public partial record BooleanLiteralNode(bool Value) : Expression
+    {
+        public override T Accept<T>(IAstVisitor<T> visitor) => visitor.Visit(this);
+    }
 
-    // Вызов конструктора
-    public record ConstructorCallNode(
+    // Идентификатор переменной/метода в текущей области.
+    public partial record IdentifierNode(string Name) : Expression
+    {
+        public override T Accept<T>(IAstVisitor<T> visitor) => visitor.Visit(this);
+    }
+
+    // Ключевое слово 'this' — текущий объект.
+    public partial record ThisNode() : Expression
+    {
+        public override T Accept<T>(IAstVisitor<T> visitor) => visitor.Visit(this);
+    }
+
+    // Вызов конструктора: ClassName [Arguments]
+    //
+    // Примеры O:
+    //   Integer(5)
+    //   Boolean(true)
+    //
+    // AST:
+    //   new ConstructorCallNode("Integer", [Int(5)])
+    public partial record ConstructorCallNode(
         string ClassName,
         List<Expression> Arguments
-    ) : Expression;
+    ) : Expression
+    {
+        public override T Accept<T>(IAstVisitor<T> visitor) => visitor.Visit(this);
+    }
 
-    // Вызов метода
-    public record MethodCallNode(
-        Expression Target,          // Объект, у которого вызывается метод
-        string MethodName,
+    // Единый вызов: Expression [ Arguments ]
+    //
+    // В языке O все вызовы — это "выражение, за которым следуют аргументы".
+    // Это покрывает и вызовы методов (через точку), и "свободные" вызовы
+    // (на самом деле — методы текущего объекта).
+    //
+    // Примеры O:
+    //   x.Plus(1)                 => Call(MemberAccess(Id("x"),"Plus"), [Int(1)])
+    //   head()                    => Call(Identifier("head"), [])
+    //   a.b().c(d).e              => цепочки через MemberAccess + Call
+    public partial record CallNode(
+        Expression Callee,
         List<Expression> Arguments
-    ) : Expression;
+    ) : Expression
+    {
+        public override T Accept<T>(IAstVisitor<T> visitor) => visitor.Visit(this);
+    }
 
-    // Доступ к полю/методу (через точку)
-    public record MemberAccessNode(
+    // Доступ к члену через точку.
+    //
+    // Примеры O:
+    //   this.x                    => MemberAccess(This(),"x")
+    //   a.Length                  => MemberAccess(Id("a"),"Length")
+    //
+    // В сочетании с CallNode получаем вызовы: a.get(i) => Call(MemberAccess(Id("a"),"get"), [Id("i")])
+    public partial record MemberAccessNode(
         Expression Target,
         string MemberName
-    ) : Expression;
-
-    // Вызов функции (без указания target - для текущего объекта)
-    public record FunctionCallNode(
-        string FunctionName,
-        List<Expression> Arguments
-    ) : Expression;
+    ) : Expression
+    {
+        public override T Accept<T>(IAstVisitor<T> visitor) => visitor.Visit(this);
+    }
 
     // =========================================================================
     // ВСПОМОГАТЕЛЬНЫЕ ТИПЫ ДЛЯ СТАНДАРТНОЙ БИБЛИОТЕКИ
     // =========================================================================
 
-    // Представление для стандартных типов
+    // Просто ярлыки для часто используемых типов стандартной библиотеки.
     public static class BuiltInTypes
     {
         public static readonly TypeNode Integer = new TypeNode("Integer");
@@ -170,6 +389,10 @@ namespace Compiler.Ast
     // ПОСЕТИТЕЛЬ ДЛЯ ОБХОДА AST (VISITOR PATTERN)
     // =========================================================================
 
+    // реальный визитор в практике:
+    // - PrettyPrinter (печать кода/дерева)
+    // - TypeChecker (семантический анализ, вывод типов var)
+    // - IRGenerator / Codegen (Генерация промежуточного/целевого кода)
     public interface IAstVisitor<T>
     {
         T Visit(ProgramNode node);
@@ -190,120 +413,10 @@ namespace Compiler.Ast
         T Visit(IdentifierNode node);
         T Visit(ThisNode node);
         T Visit(ConstructorCallNode node);
-        T Visit(MethodCallNode node);
+        T Visit(CallNode node);
         T Visit(MemberAccessNode node);
-        T Visit(FunctionCallNode node);
-    }
-
-    // Базовый класс для узлов с реализацией Accept метода
-    public abstract partial record Node
-    {
-        public abstract T Accept<T>(IAstVisitor<T> visitor);
-    }
-
-    // Реализации Accept для каждого узла
-    public partial record ProgramNode
-    {
-        public override T Accept<T>(IAstVisitor<T> visitor) => visitor.Visit(this);
-    }
-
-    public partial record ClassNode
-    {
-        public override T Accept<T>(IAstVisitor<T> visitor) => visitor.Visit(this);
-    }
-
-    public partial record VariableDeclarationNode
-    {
-        public override T Accept<T>(IAstVisitor<T> visitor) => visitor.Visit(this);
-    }
-
-    public partial record MethodDeclarationNode
-    {
-        public override T Accept<T>(IAstVisitor<T> visitor) => visitor.Visit(this);
-    }
-
-    public partial record ConstructorDeclarationNode
-    {
-        public override T Accept<T>(IAstVisitor<T> visitor) => visitor.Visit(this);
-    }
-
-    public partial record TypeNode
-    {
-        public override T Accept<T>(IAstVisitor<T> visitor) => visitor.Visit(this);
-    }
-
-    public partial record ParameterNode
-    {
-        public override T Accept<T>(IAstVisitor<T> visitor) => visitor.Visit(this);
-    }
-
-    public partial record BodyNode
-    {
-        public override T Accept<T>(IAstVisitor<T> visitor) => visitor.Visit(this);
-    }
-
-    public partial record AssignmentNode
-    {
-        public override T Accept<T>(IAstVisitor<T> visitor) => visitor.Visit(this);
-    }
-
-    public partial record WhileLoopNode
-    {
-        public override T Accept<T>(IAstVisitor<T> visitor) => visitor.Visit(this);
-    }
-
-    public partial record IfStatementNode
-    {
-        public override T Accept<T>(IAstVisitor<T> visitor) => visitor.Visit(this);
-    }
-
-    public partial record ReturnStatementNode
-    {
-        public override T Accept<T>(IAstVisitor<T> visitor) => visitor.Visit(this);
-    }
-
-    public partial record IntegerLiteralNode
-    {
-        public override T Accept<T>(IAstVisitor<T> visitor) => visitor.Visit(this);
-    }
-
-    public partial record RealLiteralNode
-    {
-        public override T Accept<T>(IAstVisitor<T> visitor) => visitor.Visit(this);
-    }
-
-    public partial record BooleanLiteralNode
-    {
-        public override T Accept<T>(IAstVisitor<T> visitor) => visitor.Visit(this);
-    }
-
-    public partial record IdentifierNode
-    {
-        public override T Accept<T>(IAstVisitor<T> visitor) => visitor.Visit(this);
-    }
-
-    public partial record ThisNode
-    {
-        public override T Accept<T>(IAstVisitor<T> visitor) => visitor.Visit(this);
-    }
-
-    public partial record ConstructorCallNode
-    {
-        public override T Accept<T>(IAstVisitor<T> visitor) => visitor.Visit(this);
-    }
-
-    public partial record MethodCallNode
-    {
-        public override T Accept<T>(IAstVisitor<T> visitor) => visitor.Visit(this);
-    }
-
-    public partial record MemberAccessNode
-    {
-        public override T Accept<T>(IAstVisitor<T> visitor) => visitor.Visit(this);
-    }
-
-    public partial record FunctionCallNode
-    {
-        public override T Accept<T>(IAstVisitor<T> visitor) => visitor.Visit(this);
+        T Visit(MethodBodyNode node);     // базовый тип для ExpressionBody/BlockBody
+        T Visit(ExpressionBodyNode node);
+        T Visit(BlockBodyNode node);
     }
 }
