@@ -3,9 +3,9 @@
 // (see accompanying GPPGcopyright.rtf)
 
 // GPPG version 1.2.1.0
-// Machine:  
-// DateTime: 25.09.2025 22:04:01
-// Input file <OParser.y - 25.09.2025 22:03:56>
+// Machine:  DESKTOP-2Q0E6TS
+// DateTime: 29.09.2025 13:36:37
+// Input file <OParser.y - 25.09.2025 22:10:58>
 
 // options: lines diagnose & report listing
 
@@ -84,7 +84,8 @@ public class Parser: ShiftReduceParser<Compiler.Parser.SemVal, LexLocation>
         return CharToString((char)terminal);
   }
 
-#line 24 "OParser.y"
+#line 23 "OParser.y"
+
 public Parser(Scanner scanner) : base(scanner) { }
 
 public Parser() : base(null) { }
