@@ -7,7 +7,9 @@ class Entry
 {
     static void Main(string[] args)
     {
-        var src = args.Length > 0 ? File.ReadAllText(args[0]) : "var x : 42\n";
+        var src = args.Length > 0
+            ? File.ReadAllText(args[0])
+            : "class Main is\n    var x : 42\nend\n";
         using var reader = new StringReader(src);
 
         var scanner = new Scanner(reader);
@@ -17,7 +19,7 @@ class Entry
         {
             if (parser.Result is ProgramNode ast)
             {
-                Console.WriteLine($"Parsed OK: var {ast.Decl.Name} : {ast.Decl.Value}");
+                Console.WriteLine($"Parsed OK: {ast.Classes.Count} class(es)");
             }
             else
             {
