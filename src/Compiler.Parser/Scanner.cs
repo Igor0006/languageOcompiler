@@ -6,7 +6,7 @@ using StarodubOleg.GPPG.Runtime;
 
 namespace Compiler.Parser
 {
-    // Имя класса должно совпадать с %scanner в .y
+    // abstractScanner is an interface between lexer and parser
     public sealed class Scanner : AbstractScanner<SemVal, LexLocation>
     {
         private readonly Lexer _lexer;
@@ -15,18 +15,20 @@ namespace Compiler.Parser
         {
             var src = reader.ReadToEnd();
             _lexer = new Lexer(src);
+            // yyloc contain location of token in text (for error messages)
             yylloc = new LexLocation(1, 1, 1, 1);
         }
 
+        // main method that parser call to get next token
         public override int yylex()
         {
             var token = _lexer.Next();
 
-            int sl = token.Line;
-            int sc = token.Column;
+            int sl = token.Line; // start line
+            int sc = token.Column; // start column
             int length = Math.Max(1, token.Lexeme?.Length ?? 0);
-            int el = token.Line;
-            int ec = token.Column + length;
+            int el = token.Line; // end line
+            int ec = token.Column + length; // end column
             yylloc = new LexLocation(sl, sc, el, ec);
 
             switch (token.Type)
