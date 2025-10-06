@@ -38,30 +38,33 @@ namespace Compiler.Parser
 
         public static SemVal FromBool(bool value) => new SemVal(value, boolValue: value);
 
-        public string Id => _id ?? _value as string ?? throw new InvalidOperationException("Semantic value does not contain an identifier.");
+        // Getters that throw an error if the stored semantic value isnt of the expected primitive type
+        public string Id => _id ?? _value as string ?? throw new InvalidOperationException("Semantic value does not contain an identifier");
 
         public int Int => _int ?? _value switch
         {
             int i => i,
             long l => checked((int)l),
-            _ => throw new InvalidOperationException("Semantic value does not contain an integer literal."),
+            _ => throw new InvalidOperationException("Semantic value does not contain an integer literal"),
         };
 
         public double Real => _real ?? _value switch
         {
             double d => d,
             float f => f,
-            _ => throw new InvalidOperationException("Semantic value does not contain a real literal."),
+            _ => throw new InvalidOperationException("Semantic value does not contain a real literal"),
         };
 
         public bool Bool => _bool ?? _value switch
         {
             bool b => b,
-            _ => throw new InvalidOperationException("Semantic value does not contain a boolean literal."),
+            _ => throw new InvalidOperationException("Semantic value does not contain a boolean literal"),
         };
 
+        // Internal guard utilities: either retrieve a castable object or throw error
         private static InvalidOperationException Missing(string message) => new InvalidOperationException(message);
 
+        // Checks that _value inside SemVal have type T
         private T Require<T>() where T : class
         {
             if (_value is T typed)
@@ -74,8 +77,10 @@ namespace Compiler.Parser
 
         private static T Require<T>(SemVal? value) where T : class => value?.Require<T>() ?? throw Missing($"Semantic value does not contain an instance of {typeof(T).Name}.");
 
+        // If value == null return null else Require<T>(value)
         private static T? Allow<T>(SemVal? value) where T : class => value is null ? null : Require<T>(value);
 
+        // Dedicated guard for union members that need to behave as IBodyItem (statements or local vars)
         private static IBodyItem RequireBodyItem(SemVal? value)
         {
             if (value?._value is IBodyItem bodyItem)
@@ -86,6 +91,7 @@ namespace Compiler.Parser
             throw Missing("Semantic value does not contain an IBodyItem.");
         }
 
+        // Allow grammar rules to reuse existing List<T> instances and push new elements into them
         public void Add(SemVal? item)
         {
             if (item is null)
@@ -115,6 +121,7 @@ namespace Compiler.Parser
             }
         }
 
+        // Implicit conversions from AST nodes, lists, and primitives so grammar actions can simply assign
         public static implicit operator SemVal?(ProgramNode? value) => value is null ? null : new SemVal(value);
         public static implicit operator SemVal?(List<ClassNode>? value) => value is null ? null : new SemVal(value);
         public static implicit operator SemVal?(ClassNode? value) => value is null ? null : new SemVal(value);
@@ -134,6 +141,7 @@ namespace Compiler.Parser
         public static implicit operator SemVal(double value) => new SemVal(value, realValue: value);
         public static implicit operator SemVal(bool value) => new SemVal(value, boolValue: value);
 
+        // Symmetric conversions: allow grammar code to pull the boxed AST node or primitive back out
         public static implicit operator ProgramNode?(SemVal? value) => Allow<ProgramNode>(value);
         public static implicit operator List<ClassNode>?(SemVal? value) => Allow<List<ClassNode>>(value);
         public static implicit operator ClassNode?(SemVal? value) => Allow<ClassNode>(value);
