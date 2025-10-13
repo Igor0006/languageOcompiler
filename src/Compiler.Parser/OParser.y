@@ -8,12 +8,10 @@
 %using System.Collections.Generic;
 %using Compiler.Ast;
 
-/* Локации из GPLEX/GPPG */
 
-/* Тип локаций */
 %locations
 
-/* Терминалы (из Lexer.TokenType): */
+/* from Lexer.TokenType */
 %token KW_CLASS KW_EXTENDS KW_IS KW_END KW_VAR KW_METHOD
 %token KW_THIS KW_RETURN KW_WHILE KW_LOOP KW_IF KW_THEN KW_ELSE
 
@@ -26,12 +24,11 @@
 %token ASSIGN      /* := */
 %token ARROW       /* => */
 
-/* Стартовый символ */
 %start program
 
 %%
 
-/* ======= Программа ======= */
+/* ======= Program ======= */
 
 program
     : /* empty */
@@ -48,13 +45,13 @@ program
         }
     ;
 
-/* список классов */
+
 class_list
     : class_decl                          { $$ = new List<ClassNode> { $1 }; }
     | class_list class_decl               { $1.Add($2); $$ = $1; }
     ;
 
-/* ======= Объявление класса =======
+/* ======= Class declaration =======
 
    class ClassName [ extends ClassName ]
          is { MemberDeclaration } end
@@ -70,12 +67,12 @@ class_decl
         }
     ;
 
-/* Имя класса (в этой версии — просто идентификатор; дженерики не реализуем) */
+/* Class name as an identifier */
 class_name
     : IDENT                              { $$ = $1.Id; }
     ;
 
-/* ======= Список членов класса ======= */
+/* ======= List of class memebers ======= */
 
 member_list
     : /* empty */                        { $$ = new List<Member>(); }
@@ -88,10 +85,11 @@ member
     | ctor_decl                          { $$ = $1; }
     ;
 
-/* ======= Переменная =======
+/* ======= Variable =======
 
    var Identifier : Expression
-   Тип в O выводится из инициализатора; в AST кладём InitialValue.
+   The type in O is derived from the initializer
+   Put initialValue in the AST.
 */
 var_decl
     : KW_VAR IDENT COLON expr
@@ -103,7 +101,33 @@ var_decl
         }
     ;
 
-/* ======= Метод =======
+
+/* ======= TYPES ======= */
+
+type_name
+    : class_name                         { $$ = new TypeNode($1); }
+    | array_type                         { $$ = $1; }
+    | list_type                          { $$ = $1; }
+    ;
+
+/* Array type: Array [ TypeName ] */
+array_type
+    : IDENT LBRACKET type_name RBRACKET
+        {
+            $$ = new ArrayTypeNode($3);
+        }
+    ;
+
+/* List type: List [ TypeName ] */
+list_type
+    : IDENT LBRACKET type_name RBRACKET
+        {
+            
+            $$ = new ListTypeNode($3);
+        }
+    ;
+
+/* ======= Method =======
 
    MethodDeclaration : MethodHeader [ MethodBody ]
 
@@ -145,13 +169,13 @@ type_name
     : class_name                         { $$ = new TypeNode($1); }
     ;
 
-/* Метод: тело */
+
 method_body
     : KW_IS body KW_END                  { $$ = new BlockBodyNode($2); }
     | ARROW expr                         { $$ = new ExpressionBodyNode($2); }
     ;
 
-/* ======= Конструктор =======
+/* ======= Constructor =======
 
    this [ Parameters ] is Body end
 */
@@ -165,7 +189,7 @@ ctor_decl
         }
     ;
 
-/* ======= Параметры =======
+/* ======= Parameters =======
 
    Parameters : ( ParameterDeclaration { , ParameterDeclaration } )
    ParameterDeclaration : Identifier : ClassName
@@ -185,10 +209,10 @@ param
     : IDENT COLON class_name             { $$ = new ParameterNode($1.Id, new TypeNode($3)); }
     ;
 
-/* ======= Тело (Body) =======
+/* ======= Body =======
 
    Body : { VariableDeclaration | Statement }
-   — смешанный список: локальные var и операторы. Оба реализуют IBodyItem.
+   Mixed list: local vars and operators. Both implement IBodyItem.
 */
 body
     : body_items                         { $$ = new BodyNode($1); }
@@ -204,7 +228,7 @@ body_item
     | stmt                               { $$ = $1; }
     ;
 
-/* ======= Операторы =======
+/* ======= Operators =======
 
    Statement :
        Assignment
@@ -220,9 +244,7 @@ stmt
     | return_stmt                        { $$ = $1; }
     ;
 
-/* Assignment : Identifier := Expression
-   (Спецификация ограничивает слева Identifier. AST умеет и MemberAccess — можно расширить при желании.)
-*/
+/* Assignment : Identifier := Expression */
 assignment
     : IDENT ASSIGN expr
         {
@@ -251,45 +273,45 @@ return_stmt
     | KW_RETURN expr                     { $$ = new ReturnStatementNode($2); }
     ;
 
-/* ======= Выражения =======
+/* ======= Expression =======
 
    Expression :
        Primary
      | ConstructorInvokation
      | FunctionCall
-     | Expression { . Expression }  (цепочки через точку)
+     | Expression { . Expression }  (chains via dot)
 
-   В AST у нас:
+   In AST:
      - ConstructorCallNode("Integer", [args...])
      - CallNode(calleeExpr, [args...])
      - MemberAccessNode(targetExpr, "name")
 
-   Трюк: разбираем «ядра» (primary/constructor/call_or_access) и разрешаем правую рекурсию для цепочек через DOT.
+   disassemble the "cores" (primary/constructor/call_or_access) and allow right-hand recursion for chains via dot.
 */
 
 expr
     : call_or_access                     { $$ = $1; }
     ;
 
-/* call_or_access покрывает и одиночный primary/constructor, и цепочки
-   вида:  primary (. IDENT (args?) )*
+/* call_or_access covers both a single primary/constructor and chains
+   kind of: primary (. IDENT (args?) )*
 */
 call_or_access
     : primary                            { $$ = $1; }
     | constructor_invocation             { $$ = $1; }
     | call_or_access DOT IDENT
         {
-            /* доступ к члену: a.b  */
+            /* member access: a.b  */
             $$ = new MemberAccessNode($1, $3.Id);
         }
     | call_or_access LPAREN RPAREN
         {
-            /* вызов без аргументов: f() или a.b() */
+            /* call without arguments: f() or a.b() */
             $$ = new CallNode($1, new List<Expression>());
         }
     | call_or_access LPAREN arg_list RPAREN
         {
-            /* вызов с аргументами: f(x, y) или a.b(x) */
+            /* call with arguments: f(x, y) или a.b(x) */
             $$ = new CallNode($1, $3);
         }
     ;
@@ -300,6 +322,25 @@ constructor_invocation
         { $$ = new ConstructorCallNode($1, new List<Expression>()); }
     | class_name LPAREN arg_list RPAREN
         { $$ = new ConstructorCallNode($1, $3); }
+    | IDENT LBRACKET type_name RBRACKET LPAREN RPAREN
+        { 
+            
+            if ($1 == "Array")
+                $$ = new ConstructorCallNode("Array", new List<Expression>());
+            else if ($1 == "List")
+                $$ = new ConstructorCallNode("List", new List<Expression>());
+            else
+                $$ = new ConstructorCallNode($1, new List<Expression>());
+        }
+    | IDENT LBRACKET type_name RBRACKET LPAREN arg_list RPAREN
+        { 
+            if ($1 == "Array")
+                $$ = new ConstructorCallNode("Array", $6);
+            else if ($1 == "List")
+                $$ = new ConstructorCallNode("List", $6);
+            else
+                $$ = new ConstructorCallNode($1, $6);
+        }
     ;
 
 /* Arguments: () | ( expr {, expr} ) */
@@ -316,8 +357,6 @@ arg_list
 
 /* Primary :
      IntegerLiteral | RealLiteral | BooleanLiteral | this
-   Идентификатор как первичный элемент здесь НЕ включаем (по спецификации доступ к члену через точку,
-   а «свободное» имя попадает как IdentifierNode и дальше может вызываться: head() и т.п.)
 */
 primary
     : INT_LITERAL                        { $$ = new IntegerLiteralNode($1.Int); }

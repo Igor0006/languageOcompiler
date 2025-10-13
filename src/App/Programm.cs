@@ -19,7 +19,9 @@ class Entry
         {
             if (parser.Result is ProgramNode ast)
             {
-                Console.WriteLine($"Parsed OK: {ast.Classes.Count} class(es)");
+                // Console.WriteLine($"Parsed OK: {ast.Classes.Count} class(es)");
+                var printer = new AstPrinter();
+                Console.WriteLine(printer.Print(ast));
             }
             else
             {

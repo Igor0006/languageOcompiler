@@ -1,6 +1,31 @@
-class Box is
-    var flag : Boolean(true)
-    var x : Integer(10)
-    var y : Real(3.14)
-    method Get() : Array[Integer] => this
+class ListTest is
+    var numbers : List[Integer]()
+    
+    this() is
+        numbers := List[Integer]()
+        numbers := numbers.append(Integer(1))
+        numbers := numbers.append(Integer(2))
+        numbers := numbers.append(Integer(3))
+    end
+    
+    method sumList : Integer is
+        var total : Integer(0)
+        var current : List[Real]()
+        current := numbers
+        var b : Boolean(true)
+
+        while b loop
+            total := total.Plus(current.head())
+            current := current.tail()
+        end
+        
+        return total
+    end
 end
+
+
+// i.Plus(1)
+// intArray.set(i, i.Mult(2))
+
+//i := i.Plus(i.Plus(3))
+// var q : intArray.set(i, i.Mult(2))

@@ -4,8 +4,8 @@
 
 // GPPG version 1.2.1.0
 // Machine:  DESKTOP-2Q0E6TS
-// DateTime: 03.10.2025 16:12:26
-// Input file <OParser.y - 03.10.2025 16:12:06>
+// DateTime: 13.10.2025 15:41:53
+// Input file <OParser.y - 13.10.2025 15:41:39>
 
 // options: lines diagnose & report listing
 
@@ -15,12 +15,17 @@ using System.CodeDom.Compiler;
 using System.Globalization;
 using System.Text;
 using StarodubOleg.GPPG.Runtime;
+using System;
+using System.Collections.Generic;
 using Compiler.Ast;
 
 namespace Compiler.Parser
 {
-public enum Tokens {error=2,EOF=3,KW_VAR=4,IDENT=5,COLON=6,
-    INT_LITERAL=7};
+public enum Tokens {error=2,EOF=3,KW_CLASS=4,KW_EXTENDS=5,KW_IS=6,
+    KW_END=7,KW_VAR=8,KW_METHOD=9,KW_THIS=10,KW_RETURN=11,KW_WHILE=12,
+    KW_LOOP=13,KW_IF=14,KW_THEN=15,KW_ELSE=16,IDENT=17,INT_LITERAL=18,
+    REAL_LITERAL=19,BOOL_LITERAL=20,LPAREN=21,RPAREN=22,COLON=23,DOT=24,
+    COMMA=25,LBRACKET=26,RBRACKET=27,ASSIGN=28,ARROW=29};
 
 [GeneratedCodeAttribute( "Gardens Point Parser Generator", "1.2.1.0")]
 public class Parser: ShiftReduceParser<Compiler.Parser.SemVal, LexLocation>
@@ -28,25 +33,204 @@ public class Parser: ShiftReduceParser<Compiler.Parser.SemVal, LexLocation>
 #pragma warning disable 649
   private static Dictionary<int, string> aliases;
 #pragma warning restore 649
-  private static Rule[] rules = new Rule[3];
-  private static State[] states = new State[8];
+  private static Rule[] rules = new Rule[70];
+  private static State[] states = new State[115];
   private static string[] nonTerms = new string[] {
-      "Program", "$accept", };
+      "program", "$accept", "class_list", "class_decl", "class_name", "member_list", 
+      "member", "var_decl", "method_decl", "ctor_decl", "expr", "type_name", 
+      "array_type", "list_type", "method_name", "opt_params", "opt_return_type", 
+      "method_body", "body", "param_list", "param", "body_items", "body_item", 
+      "stmt", "assignment", "while_stmt", "if_stmt", "return_stmt", "call_or_access", 
+      "primary", "constructor_invocation", "arg_list", "opt_args", };
 
   static Parser() {
-    states[0] = new State(new int[]{4,3},new int[]{-1,1});
+    states[0] = new State(new int[]{4,5,3,-2},new int[]{-1,1,-3,3,-4,114});
     states[1] = new State(new int[]{3,2});
     states[2] = new State(-1);
-    states[3] = new State(new int[]{5,4});
-    states[4] = new State(new int[]{6,5});
-    states[5] = new State(new int[]{7,6});
-    states[6] = new State(new int[]{3,7});
-    states[7] = new State(-2);
+    states[3] = new State(new int[]{4,5,3,-3},new int[]{-4,4});
+    states[4] = new State(-5);
+    states[5] = new State(new int[]{17,100},new int[]{-5,6});
+    states[6] = new State(new int[]{6,7,5,109});
+    states[7] = new State(-9,new int[]{-6,8});
+    states[8] = new State(new int[]{7,9,8,12,9,53,10,104},new int[]{-7,10,-8,11,-9,52,-10,103});
+    states[9] = new State(-6);
+    states[10] = new State(-10);
+    states[11] = new State(-11);
+    states[12] = new State(new int[]{17,13});
+    states[13] = new State(new int[]{23,14});
+    states[14] = new State(new int[]{18,26,19,27,20,28,10,29,17,30},new int[]{-11,15,-29,16,-30,25,-31,39,-5,40});
+    states[15] = new State(-14);
+    states[16] = new State(new int[]{24,17,21,19,7,-50,8,-50,9,-50,10,-50,17,-50,12,-50,14,-50,11,-50,16,-50,22,-50,25,-50,13,-50,15,-50});
+    states[17] = new State(new int[]{17,18});
+    states[18] = new State(-53);
+    states[19] = new State(new int[]{22,20,18,26,19,27,20,28,10,29,17,30},new int[]{-32,21,-11,38,-29,16,-30,25,-31,39,-5,40});
+    states[20] = new State(-54);
+    states[21] = new State(new int[]{22,22,25,23});
+    states[22] = new State(-55);
+    states[23] = new State(new int[]{18,26,19,27,20,28,10,29,17,30},new int[]{-11,24,-29,16,-30,25,-31,39,-5,40});
+    states[24] = new State(-64);
+    states[25] = new State(-51);
+    states[26] = new State(-65);
+    states[27] = new State(-66);
+    states[28] = new State(-67);
+    states[29] = new State(-68);
+    states[30] = new State(new int[]{26,31,24,-69,21,-8,7,-69,8,-69,9,-69,10,-69,17,-69,12,-69,14,-69,11,-69,16,-69,22,-69,25,-69,13,-69,15,-69});
+    states[31] = new State(new int[]{17,46},new int[]{-12,32,-5,45,-13,50,-14,51});
+    states[32] = new State(new int[]{27,33});
+    states[33] = new State(new int[]{21,34});
+    states[34] = new State(new int[]{22,35,18,26,19,27,20,28,10,29,17,30},new int[]{-32,36,-11,38,-29,16,-30,25,-31,39,-5,40});
+    states[35] = new State(-58);
+    states[36] = new State(new int[]{22,37,25,23});
+    states[37] = new State(-59);
+    states[38] = new State(-63);
+    states[39] = new State(-52);
+    states[40] = new State(new int[]{21,41});
+    states[41] = new State(new int[]{22,42,18,26,19,27,20,28,10,29,17,30},new int[]{-32,43,-11,38,-29,16,-30,25,-31,39,-5,40});
+    states[42] = new State(-56);
+    states[43] = new State(new int[]{22,44,25,23});
+    states[44] = new State(-57);
+    states[45] = new State(-15);
+    states[46] = new State(new int[]{26,47,27,-8,6,-8,29,-8,7,-8,8,-8,9,-8,10,-8});
+    states[47] = new State(new int[]{17,46},new int[]{-12,48,-5,45,-13,50,-14,51});
+    states[48] = new State(new int[]{27,49});
+    states[49] = new State(-18);
+    states[50] = new State(-16);
+    states[51] = new State(-17);
+    states[52] = new State(-12);
+    states[53] = new State(new int[]{17,102},new int[]{-15,54});
+    states[54] = new State(new int[]{21,91,23,-29,6,-29,29,-29,7,-29,8,-29,9,-29,10,-29},new int[]{-16,55});
+    states[55] = new State(new int[]{23,89,6,-23,29,-23,7,-23,8,-23,9,-23,10,-23},new int[]{-17,56});
+    states[56] = new State(new int[]{6,58,29,87,7,-21,8,-21,9,-21,10,-21},new int[]{-18,57});
+    states[57] = new State(-20);
+    states[58] = new State(-36,new int[]{-19,59,-22,61});
+    states[59] = new State(new int[]{7,60});
+    states[60] = new State(-26);
+    states[61] = new State(new int[]{8,12,17,66,12,70,14,76,11,85,7,-35,16,-35},new int[]{-23,62,-8,63,-24,64,-25,65,-26,69,-27,75,-28,84});
+    states[62] = new State(-37);
+    states[63] = new State(-38);
+    states[64] = new State(-39);
+    states[65] = new State(-40);
+    states[66] = new State(new int[]{28,67});
+    states[67] = new State(new int[]{18,26,19,27,20,28,10,29,17,30},new int[]{-11,68,-29,16,-30,25,-31,39,-5,40});
+    states[68] = new State(-44);
+    states[69] = new State(-41);
+    states[70] = new State(new int[]{18,26,19,27,20,28,10,29,17,30},new int[]{-11,71,-29,16,-30,25,-31,39,-5,40});
+    states[71] = new State(new int[]{13,72});
+    states[72] = new State(-36,new int[]{-19,73,-22,61});
+    states[73] = new State(new int[]{7,74});
+    states[74] = new State(-45);
+    states[75] = new State(-42);
+    states[76] = new State(new int[]{18,26,19,27,20,28,10,29,17,30},new int[]{-11,77,-29,16,-30,25,-31,39,-5,40});
+    states[77] = new State(new int[]{15,78});
+    states[78] = new State(-36,new int[]{-19,79,-22,61});
+    states[79] = new State(new int[]{7,80,16,81});
+    states[80] = new State(-46);
+    states[81] = new State(-36,new int[]{-19,82,-22,61});
+    states[82] = new State(new int[]{7,83});
+    states[83] = new State(-47);
+    states[84] = new State(-43);
+    states[85] = new State(new int[]{18,26,19,27,20,28,10,29,17,30,8,-48,12,-48,14,-48,11,-48,7,-48,16,-48},new int[]{-11,86,-29,16,-30,25,-31,39,-5,40});
+    states[86] = new State(-49);
+    states[87] = new State(new int[]{18,26,19,27,20,28,10,29,17,30},new int[]{-11,88,-29,16,-30,25,-31,39,-5,40});
+    states[88] = new State(-27);
+    states[89] = new State(new int[]{17,46},new int[]{-12,90,-5,45,-13,50,-14,51});
+    states[90] = new State(-24);
+    states[91] = new State(new int[]{22,92,17,97},new int[]{-20,93,-21,101});
+    states[92] = new State(-30);
+    states[93] = new State(new int[]{22,94,25,95});
+    states[94] = new State(-31);
+    states[95] = new State(new int[]{17,97},new int[]{-21,96});
+    states[96] = new State(-33);
+    states[97] = new State(new int[]{23,98});
+    states[98] = new State(new int[]{17,100},new int[]{-5,99});
+    states[99] = new State(-34);
+    states[100] = new State(-8);
+    states[101] = new State(-32);
+    states[102] = new State(-22);
+    states[103] = new State(-13);
+    states[104] = new State(new int[]{21,91,6,-29},new int[]{-16,105});
+    states[105] = new State(new int[]{6,106});
+    states[106] = new State(-36,new int[]{-19,107,-22,61});
+    states[107] = new State(new int[]{7,108});
+    states[108] = new State(-28);
+    states[109] = new State(new int[]{17,100},new int[]{-5,110});
+    states[110] = new State(new int[]{6,111});
+    states[111] = new State(-9,new int[]{-6,112});
+    states[112] = new State(new int[]{7,113,8,12,9,53,10,104},new int[]{-7,10,-8,11,-9,52,-10,103});
+    states[113] = new State(-7);
+    states[114] = new State(-4);
 
     for (int sNo = 0; sNo < states.Length; sNo++) states[sNo].number = sNo;
 
     rules[1] = new Rule(-2, new int[]{-1,3});
-    rules[2] = new Rule(-1, new int[]{4,5,6,7,3});
+    rules[2] = new Rule(-1, new int[]{});
+    rules[3] = new Rule(-1, new int[]{-3});
+    rules[4] = new Rule(-3, new int[]{-4});
+    rules[5] = new Rule(-3, new int[]{-3,-4});
+    rules[6] = new Rule(-4, new int[]{4,-5,6,-6,7});
+    rules[7] = new Rule(-4, new int[]{4,-5,5,-5,6,-6,7});
+    rules[8] = new Rule(-5, new int[]{17});
+    rules[9] = new Rule(-6, new int[]{});
+    rules[10] = new Rule(-6, new int[]{-6,-7});
+    rules[11] = new Rule(-7, new int[]{-8});
+    rules[12] = new Rule(-7, new int[]{-9});
+    rules[13] = new Rule(-7, new int[]{-10});
+    rules[14] = new Rule(-8, new int[]{8,17,23,-11});
+    rules[15] = new Rule(-12, new int[]{-5});
+    rules[16] = new Rule(-12, new int[]{-13});
+    rules[17] = new Rule(-12, new int[]{-14});
+    rules[18] = new Rule(-13, new int[]{17,26,-12,27});
+    rules[19] = new Rule(-14, new int[]{17,26,-12,27});
+    rules[20] = new Rule(-9, new int[]{9,-15,-16,-17,-18});
+    rules[21] = new Rule(-9, new int[]{9,-15,-16,-17});
+    rules[22] = new Rule(-15, new int[]{17});
+    rules[23] = new Rule(-17, new int[]{});
+    rules[24] = new Rule(-17, new int[]{23,-12});
+    rules[25] = new Rule(-12, new int[]{-5});
+    rules[26] = new Rule(-18, new int[]{6,-19,7});
+    rules[27] = new Rule(-18, new int[]{29,-11});
+    rules[28] = new Rule(-10, new int[]{10,-16,6,-19,7});
+    rules[29] = new Rule(-16, new int[]{});
+    rules[30] = new Rule(-16, new int[]{21,22});
+    rules[31] = new Rule(-16, new int[]{21,-20,22});
+    rules[32] = new Rule(-20, new int[]{-21});
+    rules[33] = new Rule(-20, new int[]{-20,25,-21});
+    rules[34] = new Rule(-21, new int[]{17,23,-5});
+    rules[35] = new Rule(-19, new int[]{-22});
+    rules[36] = new Rule(-22, new int[]{});
+    rules[37] = new Rule(-22, new int[]{-22,-23});
+    rules[38] = new Rule(-23, new int[]{-8});
+    rules[39] = new Rule(-23, new int[]{-24});
+    rules[40] = new Rule(-24, new int[]{-25});
+    rules[41] = new Rule(-24, new int[]{-26});
+    rules[42] = new Rule(-24, new int[]{-27});
+    rules[43] = new Rule(-24, new int[]{-28});
+    rules[44] = new Rule(-25, new int[]{17,28,-11});
+    rules[45] = new Rule(-26, new int[]{12,-11,13,-19,7});
+    rules[46] = new Rule(-27, new int[]{14,-11,15,-19,7});
+    rules[47] = new Rule(-27, new int[]{14,-11,15,-19,16,-19,7});
+    rules[48] = new Rule(-28, new int[]{11});
+    rules[49] = new Rule(-28, new int[]{11,-11});
+    rules[50] = new Rule(-11, new int[]{-29});
+    rules[51] = new Rule(-29, new int[]{-30});
+    rules[52] = new Rule(-29, new int[]{-31});
+    rules[53] = new Rule(-29, new int[]{-29,24,17});
+    rules[54] = new Rule(-29, new int[]{-29,21,22});
+    rules[55] = new Rule(-29, new int[]{-29,21,-32,22});
+    rules[56] = new Rule(-31, new int[]{-5,21,22});
+    rules[57] = new Rule(-31, new int[]{-5,21,-32,22});
+    rules[58] = new Rule(-31, new int[]{17,26,-12,27,21,22});
+    rules[59] = new Rule(-31, new int[]{17,26,-12,27,21,-32,22});
+    rules[60] = new Rule(-33, new int[]{});
+    rules[61] = new Rule(-33, new int[]{21,22});
+    rules[62] = new Rule(-33, new int[]{21,-32,22});
+    rules[63] = new Rule(-32, new int[]{-11});
+    rules[64] = new Rule(-32, new int[]{-32,25,-11});
+    rules[65] = new Rule(-30, new int[]{18});
+    rules[66] = new Rule(-30, new int[]{19});
+    rules[67] = new Rule(-30, new int[]{20});
+    rules[68] = new Rule(-30, new int[]{10});
+    rules[69] = new Rule(-30, new int[]{17});
   }
 
   protected override void Initialize() {
@@ -61,13 +245,415 @@ public class Parser: ShiftReduceParser<Compiler.Parser.SemVal, LexLocation>
 #pragma warning disable 162, 1522
     switch (action)
     {
-      case 2: // Program -> KW_VAR, IDENT, COLON, INT_LITERAL, EOF
-#line 15 "OParser.y"
+      case 2: // program -> /* empty */
+#line 35 "OParser.y"
         {
-            var name = ValueStack[ValueStack.Depth-4].Id ?? throw new InvalidOperationException("Identifier missing");
-            var value = ValueStack[ValueStack.Depth-2].IntVal ?? throw new InvalidOperationException("Integer literal missing");
-            Result = new ProgramNode(new VarDecl(name, value));
+            var program = new ProgramNode(new List<ClassNode>());
+            Result = program;
+            CurrentSemanticValue = program;
         }
+#line default
+        break;
+      case 3: // program -> class_list
+#line 41 "OParser.y"
+        {
+            var program = new ProgramNode(ValueStack[ValueStack.Depth-1]);
+            Result = program;
+            CurrentSemanticValue = program;
+        }
+#line default
+        break;
+      case 4: // class_list -> class_decl
+#line 50 "OParser.y"
+                                          { CurrentSemanticValue = new List<ClassNode> { ValueStack[ValueStack.Depth-1] }; }
+#line default
+        break;
+      case 5: // class_list -> class_list, class_decl
+#line 51 "OParser.y"
+                                          { ValueStack[ValueStack.Depth-2].Add(ValueStack[ValueStack.Depth-1]); CurrentSemanticValue = ValueStack[ValueStack.Depth-2]; }
+#line default
+        break;
+      case 6: // class_decl -> KW_CLASS, class_name, KW_IS, member_list, KW_END
+#line 61 "OParser.y"
+        {
+            CurrentSemanticValue = new ClassNode(ValueStack[ValueStack.Depth-4], null, ValueStack[ValueStack.Depth-2]);
+        }
+#line default
+        break;
+      case 7: // class_decl -> KW_CLASS, class_name, KW_EXTENDS, class_name, KW_IS, member_list, 
+              //               KW_END
+#line 65 "OParser.y"
+        {
+            CurrentSemanticValue = new ClassNode(ValueStack[ValueStack.Depth-6], ValueStack[ValueStack.Depth-4], ValueStack[ValueStack.Depth-2]);
+        }
+#line default
+        break;
+      case 8: // class_name -> IDENT
+#line 72 "OParser.y"
+                                         { CurrentSemanticValue = ValueStack[ValueStack.Depth-1].Id; }
+#line default
+        break;
+      case 9: // member_list -> /* empty */
+#line 78 "OParser.y"
+                                         { CurrentSemanticValue = new List<Member>(); }
+#line default
+        break;
+      case 10: // member_list -> member_list, member
+#line 79 "OParser.y"
+                                         { ValueStack[ValueStack.Depth-2].Add(ValueStack[ValueStack.Depth-1]); CurrentSemanticValue = ValueStack[ValueStack.Depth-2]; }
+#line default
+        break;
+      case 11: // member -> var_decl
+#line 83 "OParser.y"
+                                         { CurrentSemanticValue = ValueStack[ValueStack.Depth-1]; }
+#line default
+        break;
+      case 12: // member -> method_decl
+#line 84 "OParser.y"
+                                         { CurrentSemanticValue = ValueStack[ValueStack.Depth-1]; }
+#line default
+        break;
+      case 13: // member -> ctor_decl
+#line 85 "OParser.y"
+                                         { CurrentSemanticValue = ValueStack[ValueStack.Depth-1]; }
+#line default
+        break;
+      case 14: // var_decl -> KW_VAR, IDENT, COLON, expr
+#line 96 "OParser.y"
+        {
+            CurrentSemanticValue = new VariableDeclarationNode(
+                    Name: ValueStack[ValueStack.Depth-3].Id,
+                    InitialValue: ValueStack[ValueStack.Depth-1]
+                 );
+        }
+#line default
+        break;
+      case 15: // type_name -> class_name
+#line 108 "OParser.y"
+                                         { CurrentSemanticValue = new TypeNode(ValueStack[ValueStack.Depth-1]); }
+#line default
+        break;
+      case 16: // type_name -> array_type
+#line 109 "OParser.y"
+                                         { CurrentSemanticValue = ValueStack[ValueStack.Depth-1]; }
+#line default
+        break;
+      case 17: // type_name -> list_type
+#line 110 "OParser.y"
+                                         { CurrentSemanticValue = ValueStack[ValueStack.Depth-1]; }
+#line default
+        break;
+      case 18: // array_type -> IDENT, LBRACKET, type_name, RBRACKET
+#line 116 "OParser.y"
+        {
+            CurrentSemanticValue = new ArrayTypeNode(ValueStack[ValueStack.Depth-2]);
+        }
+#line default
+        break;
+      case 19: // list_type -> IDENT, LBRACKET, type_name, RBRACKET
+#line 124 "OParser.y"
+        {
+            
+            CurrentSemanticValue = new ListTypeNode(ValueStack[ValueStack.Depth-2]);
+        }
+#line default
+        break;
+      case 20: // method_decl -> KW_METHOD, method_name, opt_params, opt_return_type, method_body
+#line 139 "OParser.y"
+        {
+            CurrentSemanticValue = new MethodDeclarationNode(
+                    Name: ValueStack[ValueStack.Depth-4],
+                    Parameters: ValueStack[ValueStack.Depth-3],
+                    ReturnType: ValueStack[ValueStack.Depth-2],
+                    Body: ValueStack[ValueStack.Depth-1]
+                 );
+        }
+#line default
+        break;
+      case 21: // method_decl -> KW_METHOD, method_name, opt_params, opt_return_type
+#line 148 "OParser.y"
+        {
+            /* forward declaration: Body == null */
+            CurrentSemanticValue = new MethodDeclarationNode(
+                    Name: ValueStack[ValueStack.Depth-3],
+                    Parameters: ValueStack[ValueStack.Depth-2],
+                    ReturnType: ValueStack[ValueStack.Depth-1],
+                    Body: null
+                 );
+        }
+#line default
+        break;
+      case 22: // method_name -> IDENT
+#line 160 "OParser.y"
+                                         { CurrentSemanticValue = ValueStack[ValueStack.Depth-1].Id; }
+#line default
+        break;
+      case 23: // opt_return_type -> /* empty */
+#line 164 "OParser.y"
+                                         { CurrentSemanticValue = null; }
+#line default
+        break;
+      case 24: // opt_return_type -> COLON, type_name
+#line 165 "OParser.y"
+                                         { CurrentSemanticValue = ValueStack[ValueStack.Depth-1]; }
+#line default
+        break;
+      case 25: // type_name -> class_name
+#line 169 "OParser.y"
+                                         { CurrentSemanticValue = new TypeNode(ValueStack[ValueStack.Depth-1]); }
+#line default
+        break;
+      case 26: // method_body -> KW_IS, body, KW_END
+#line 174 "OParser.y"
+                                         { CurrentSemanticValue = new BlockBodyNode(ValueStack[ValueStack.Depth-2]); }
+#line default
+        break;
+      case 27: // method_body -> ARROW, expr
+#line 175 "OParser.y"
+                                         { CurrentSemanticValue = new ExpressionBodyNode(ValueStack[ValueStack.Depth-1]); }
+#line default
+        break;
+      case 28: // ctor_decl -> KW_THIS, opt_params, KW_IS, body, KW_END
+#line 184 "OParser.y"
+        {
+            CurrentSemanticValue = new ConstructorDeclarationNode(
+                    Parameters: ValueStack[ValueStack.Depth-4],
+                    Body: ValueStack[ValueStack.Depth-2]
+                 );
+        }
+#line default
+        break;
+      case 29: // opt_params -> /* empty */
+#line 198 "OParser.y"
+                                         { CurrentSemanticValue = new List<ParameterNode>(); }
+#line default
+        break;
+      case 30: // opt_params -> LPAREN, RPAREN
+#line 199 "OParser.y"
+                                         { CurrentSemanticValue = new List<ParameterNode>(); }
+#line default
+        break;
+      case 31: // opt_params -> LPAREN, param_list, RPAREN
+#line 200 "OParser.y"
+                                         { CurrentSemanticValue = ValueStack[ValueStack.Depth-2]; }
+#line default
+        break;
+      case 32: // param_list -> param
+#line 204 "OParser.y"
+                                         { CurrentSemanticValue = new List<ParameterNode> { ValueStack[ValueStack.Depth-1] }; }
+#line default
+        break;
+      case 33: // param_list -> param_list, COMMA, param
+#line 205 "OParser.y"
+                                         { ValueStack[ValueStack.Depth-3].Add(ValueStack[ValueStack.Depth-1]); CurrentSemanticValue = ValueStack[ValueStack.Depth-3]; }
+#line default
+        break;
+      case 34: // param -> IDENT, COLON, class_name
+#line 209 "OParser.y"
+                                         { CurrentSemanticValue = new ParameterNode(ValueStack[ValueStack.Depth-3].Id, new TypeNode(ValueStack[ValueStack.Depth-1])); }
+#line default
+        break;
+      case 35: // body -> body_items
+#line 218 "OParser.y"
+                                         { CurrentSemanticValue = new BodyNode(ValueStack[ValueStack.Depth-1]); }
+#line default
+        break;
+      case 36: // body_items -> /* empty */
+#line 222 "OParser.y"
+                                         { CurrentSemanticValue = new List<IBodyItem>(); }
+#line default
+        break;
+      case 37: // body_items -> body_items, body_item
+#line 223 "OParser.y"
+                                         { ValueStack[ValueStack.Depth-2].Add(ValueStack[ValueStack.Depth-1]); CurrentSemanticValue = ValueStack[ValueStack.Depth-2]; }
+#line default
+        break;
+      case 38: // body_item -> var_decl
+#line 227 "OParser.y"
+                                         { CurrentSemanticValue = ValueStack[ValueStack.Depth-1]; }
+#line default
+        break;
+      case 39: // body_item -> stmt
+#line 228 "OParser.y"
+                                         { CurrentSemanticValue = ValueStack[ValueStack.Depth-1]; }
+#line default
+        break;
+      case 40: // stmt -> assignment
+#line 241 "OParser.y"
+                                         { CurrentSemanticValue = ValueStack[ValueStack.Depth-1]; }
+#line default
+        break;
+      case 41: // stmt -> while_stmt
+#line 242 "OParser.y"
+                                         { CurrentSemanticValue = ValueStack[ValueStack.Depth-1]; }
+#line default
+        break;
+      case 42: // stmt -> if_stmt
+#line 243 "OParser.y"
+                                         { CurrentSemanticValue = ValueStack[ValueStack.Depth-1]; }
+#line default
+        break;
+      case 43: // stmt -> return_stmt
+#line 244 "OParser.y"
+                                         { CurrentSemanticValue = ValueStack[ValueStack.Depth-1]; }
+#line default
+        break;
+      case 44: // assignment -> IDENT, ASSIGN, expr
+#line 250 "OParser.y"
+        {
+            var lhs = new IdentifierNode(ValueStack[ValueStack.Depth-3].Id);
+            CurrentSemanticValue = new AssignmentNode(lhs, ValueStack[ValueStack.Depth-1]);
+        }
+#line default
+        break;
+      case 45: // while_stmt -> KW_WHILE, expr, KW_LOOP, body, KW_END
+#line 259 "OParser.y"
+        { CurrentSemanticValue = new WhileLoopNode(ValueStack[ValueStack.Depth-4], ValueStack[ValueStack.Depth-2]); }
+#line default
+        break;
+      case 46: // if_stmt -> KW_IF, expr, KW_THEN, body, KW_END
+#line 265 "OParser.y"
+        { CurrentSemanticValue = new IfStatementNode(ValueStack[ValueStack.Depth-4], ValueStack[ValueStack.Depth-2], null); }
+#line default
+        break;
+      case 47: // if_stmt -> KW_IF, expr, KW_THEN, body, KW_ELSE, body, KW_END
+#line 267 "OParser.y"
+        { CurrentSemanticValue = new IfStatementNode(ValueStack[ValueStack.Depth-6], ValueStack[ValueStack.Depth-4], ValueStack[ValueStack.Depth-2]); }
+#line default
+        break;
+      case 48: // return_stmt -> KW_RETURN
+#line 272 "OParser.y"
+                                         { CurrentSemanticValue = new ReturnStatementNode(null); }
+#line default
+        break;
+      case 49: // return_stmt -> KW_RETURN, expr
+#line 273 "OParser.y"
+                                         { CurrentSemanticValue = new ReturnStatementNode(ValueStack[ValueStack.Depth-1]); }
+#line default
+        break;
+      case 50: // expr -> call_or_access
+#line 293 "OParser.y"
+                                         { CurrentSemanticValue = ValueStack[ValueStack.Depth-1]; }
+#line default
+        break;
+      case 51: // call_or_access -> primary
+#line 300 "OParser.y"
+                                         { CurrentSemanticValue = ValueStack[ValueStack.Depth-1]; }
+#line default
+        break;
+      case 52: // call_or_access -> constructor_invocation
+#line 301 "OParser.y"
+                                         { CurrentSemanticValue = ValueStack[ValueStack.Depth-1]; }
+#line default
+        break;
+      case 53: // call_or_access -> call_or_access, DOT, IDENT
+#line 303 "OParser.y"
+        {
+            /* member access: a.b  */
+            CurrentSemanticValue = new MemberAccessNode(ValueStack[ValueStack.Depth-3], ValueStack[ValueStack.Depth-1].Id);
+        }
+#line default
+        break;
+      case 54: // call_or_access -> call_or_access, LPAREN, RPAREN
+#line 308 "OParser.y"
+        {
+            /* call without arguments: f() or a.b() */
+            CurrentSemanticValue = new CallNode(ValueStack[ValueStack.Depth-3], new List<Expression>());
+        }
+#line default
+        break;
+      case 55: // call_or_access -> call_or_access, LPAREN, arg_list, RPAREN
+#line 313 "OParser.y"
+        {
+            /* call with arguments: f(x, y) Ð¸Ð»Ð¸ a.b(x) */
+            CurrentSemanticValue = new CallNode(ValueStack[ValueStack.Depth-4], ValueStack[ValueStack.Depth-2]);
+        }
+#line default
+        break;
+      case 56: // constructor_invocation -> class_name, LPAREN, RPAREN
+#line 322 "OParser.y"
+        { CurrentSemanticValue = new ConstructorCallNode(ValueStack[ValueStack.Depth-3], new List<Expression>()); }
+#line default
+        break;
+      case 57: // constructor_invocation -> class_name, LPAREN, arg_list, RPAREN
+#line 324 "OParser.y"
+        { CurrentSemanticValue = new ConstructorCallNode(ValueStack[ValueStack.Depth-4], ValueStack[ValueStack.Depth-2]); }
+#line default
+        break;
+      case 58: // constructor_invocation -> IDENT, LBRACKET, type_name, RBRACKET, LPAREN, RPAREN
+#line 326 "OParser.y"
+        { 
+            
+            if (ValueStack[ValueStack.Depth-6] == "Array")
+                CurrentSemanticValue = new ConstructorCallNode("Array", new List<Expression>());
+            else if (ValueStack[ValueStack.Depth-6] == "List")
+                CurrentSemanticValue = new ConstructorCallNode("List", new List<Expression>());
+            else
+                CurrentSemanticValue = new ConstructorCallNode(ValueStack[ValueStack.Depth-6], new List<Expression>());
+        }
+#line default
+        break;
+      case 59: // constructor_invocation -> IDENT, LBRACKET, type_name, RBRACKET, LPAREN, 
+               //                           arg_list, RPAREN
+#line 336 "OParser.y"
+        { 
+            if (ValueStack[ValueStack.Depth-7] == "Array")
+                CurrentSemanticValue = new ConstructorCallNode("Array", ValueStack[ValueStack.Depth-2]);
+            else if (ValueStack[ValueStack.Depth-7] == "List")
+                CurrentSemanticValue = new ConstructorCallNode("List", ValueStack[ValueStack.Depth-2]);
+            else
+                CurrentSemanticValue = new ConstructorCallNode(ValueStack[ValueStack.Depth-7], ValueStack[ValueStack.Depth-2]);
+        }
+#line default
+        break;
+      case 60: // opt_args -> /* empty */
+#line 348 "OParser.y"
+                                         { CurrentSemanticValue = new List<Expression>(); }
+#line default
+        break;
+      case 61: // opt_args -> LPAREN, RPAREN
+#line 349 "OParser.y"
+                                         { CurrentSemanticValue = new List<Expression>(); }
+#line default
+        break;
+      case 62: // opt_args -> LPAREN, arg_list, RPAREN
+#line 350 "OParser.y"
+                                         { CurrentSemanticValue = ValueStack[ValueStack.Depth-2]; }
+#line default
+        break;
+      case 63: // arg_list -> expr
+#line 354 "OParser.y"
+                                         { CurrentSemanticValue = new List<Expression> { ValueStack[ValueStack.Depth-1] }; }
+#line default
+        break;
+      case 64: // arg_list -> arg_list, COMMA, expr
+#line 355 "OParser.y"
+                                         { ValueStack[ValueStack.Depth-3].Add(ValueStack[ValueStack.Depth-1]); CurrentSemanticValue = ValueStack[ValueStack.Depth-3]; }
+#line default
+        break;
+      case 65: // primary -> INT_LITERAL
+#line 362 "OParser.y"
+                                         { CurrentSemanticValue = new IntegerLiteralNode(ValueStack[ValueStack.Depth-1].Int); }
+#line default
+        break;
+      case 66: // primary -> REAL_LITERAL
+#line 363 "OParser.y"
+                                         { CurrentSemanticValue = new RealLiteralNode(ValueStack[ValueStack.Depth-1].Real); }
+#line default
+        break;
+      case 67: // primary -> BOOL_LITERAL
+#line 364 "OParser.y"
+                                         { CurrentSemanticValue = new BooleanLiteralNode(ValueStack[ValueStack.Depth-1].Bool); }
+#line default
+        break;
+      case 68: // primary -> KW_THIS
+#line 365 "OParser.y"
+                                         { CurrentSemanticValue = new ThisNode(); }
+#line default
+        break;
+      case 69: // primary -> IDENT
+#line 366 "OParser.y"
+                                         { CurrentSemanticValue = new IdentifierNode(ValueStack[ValueStack.Depth-1].Id); }
 #line default
         break;
     }
@@ -84,15 +670,15 @@ public class Parser: ShiftReduceParser<Compiler.Parser.SemVal, LexLocation>
         return CharToString((char)terminal);
   }
 
-#line 23 "OParser.y"
+#line 370 "OParser.y"
 
-public Parser(Scanner scanner) : base(scanner) { }
+/* ============= C# trailer ============= */
 
-public Parser() : base(null) { }
+public Parser(Scanner scanner) : base(scanner)
+{
+}
 
-#nullable enable
 public ProgramNode? Result { get; private set; }
-#nullable restore
 #line default
 }
 }
