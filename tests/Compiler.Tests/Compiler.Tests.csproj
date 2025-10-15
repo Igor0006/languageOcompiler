@@ -19,7 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Compiler.Lex\Compiler.Lex.csproj" />
+    <ProjectReference Include="..\..\src\languageOcompiler.csproj" />
   </ItemGroup>
 
 </Project>
