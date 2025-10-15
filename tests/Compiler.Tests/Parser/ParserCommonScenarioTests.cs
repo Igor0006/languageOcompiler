@@ -1,3 +1,4 @@
+using System.IO;
 using System.Linq;
 using Compiler.Ast;
 using Xunit;
@@ -696,5 +697,36 @@ Classes: [
 """;
 
         Assert.Equal(expectedAst, printer.Print(program));
+    }
+
+    [Fact]
+    public void MissingEndKeywordCausesParseFailure()
+    {
+        var source = @"
+class Incomplete is
+    var value : Integer(0)
+";
+
+        using var reader = new StringReader(source);
+        var parser = new Compiler.Parser.Parser(new Compiler.Parser.Scanner(reader));
+
+        Assert.False(parser.Parse());
+        Assert.Null(parser.Result);
+    }
+
+    [Fact]
+    public void VariableDeclarationWithoutInitializerFails()
+    {
+        var source = @"
+class Broken is
+    var value :
+end
+";
+
+        using var reader = new StringReader(source);
+        var parser = new Compiler.Parser.Parser(new Compiler.Parser.Scanner(reader));
+
+        Assert.False(parser.Parse());
+        Assert.Null(parser.Result);
     }
 }
