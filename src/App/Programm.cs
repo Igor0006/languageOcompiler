@@ -1,7 +1,8 @@
 using System;
 using System.IO;
-using Compiler.Parser;
 using Compiler.Ast;
+using Compiler.Parser;
+using Compiler.Semantics;
 
 class Entry
 {
@@ -19,9 +20,19 @@ class Entry
         {
             if (parser.Result is ProgramNode ast)
             {
-                // Console.WriteLine($"Parsed OK: {ast.Classes.Count} class(es)");
-                var printer = new AstPrinter();
-                Console.WriteLine(printer.Print(ast));
+                try
+                {
+                    // Run semantic analysis before printing the AST.
+                    var analyzer = new SemanticAnalyzer();
+                    analyzer.Analyze(ast);
+
+                    var printer = new AstPrinter();
+                    Console.WriteLine(printer.Print(ast));
+                }
+                catch (SemanticException ex)
+                {
+                    Console.WriteLine($"Semantic error: {ex.Message}");
+                }
             }
             else
             {

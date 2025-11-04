@@ -1,0 +1,486 @@
+using System;
+using System.Linq;
+using Compiler.Ast;
+using Compiler.Semantics;
+using Xunit;
+
+namespace Compiler.Tests.Semantics;
+
+public class SemanticAnalyzerTests
+{
+    [Fact]
+    public void ValidProgramPasses()
+    {
+        var source = @"
+class Sample is
+    var value : Integer(1)
+
+    method GetValue : Integer => value
+
+    method SetValue(newValue: Integer) is
+        value := newValue
+    end
+
+    method Combine(other: Integer) : Integer is
+        var sum : value.Plus(other)
+        return sum
+    end
+
+    this(initial: Integer) is
+        value := initial
+    end
+end
+";
+
+        SemanticTestHelper.Analyze(source);
+    }
+
+    [Fact]
+    public void ReturnInsideConstructorThrows()
+    {
+        var source = @"
+class Sample is
+    this() is
+        return
+    end
+end
+";
+
+        var exception = Assert.Throws<SemanticException>(() => SemanticTestHelper.Analyze(source));
+        Assert.Contains("return", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ReturnTypeMismatchThrows()
+    {
+        var source = @"
+class Sample is
+    method GetFlag : Integer is
+        return Boolean(true)
+    end
+end
+";
+
+        Assert.Throws<SemanticException>(() => SemanticTestHelper.Analyze(source));
+    }
+
+    [Fact]
+    public void MissingReturnValueThrows()
+    {
+        var source = @"
+class Sample is
+    method GetNumber : Integer is
+        return
+    end
+end
+";
+
+        Assert.Throws<SemanticException>(() => SemanticTestHelper.Analyze(source));
+    }
+
+    [Fact]
+    public void VoidMethodReturningValueThrows()
+    {
+        var source = @"
+class Sample is
+    method DoWork is
+        return Integer(1)
+    end
+end
+";
+
+        Assert.Throws<SemanticException>(() => SemanticTestHelper.Analyze(source));
+    }
+
+    [Fact]
+    public void UndeclaredVariableUsageThrows()
+    {
+        var source = @"
+class Sample is
+    method GetValue : Integer is
+        return missing
+    end
+end
+";
+
+        Assert.Throws<SemanticException>(() => SemanticTestHelper.Analyze(source));
+    }
+
+    [Fact]
+    public void AssignmentTypeMismatchThrows()
+    {
+        var source = @"
+class Sample is
+    method Update is
+        var value : Integer(0)
+        value := Boolean(true)
+    end
+end
+";
+
+        Assert.Throws<SemanticException>(() => SemanticTestHelper.Analyze(source));
+    }
+
+    [Fact]
+    public void UnknownClassInConstructorCallThrows()
+    {
+        var source = @"
+class Sample is
+    method Create is
+        var item : Mystery()
+    end
+end
+";
+
+        Assert.Throws<SemanticException>(() => SemanticTestHelper.Analyze(source));
+    }
+
+    [Fact]
+    public void UnknownMethodCallThrows()
+    {
+        var source = @"
+class Sample is
+    method Use : Integer is
+        return Missing()
+    end
+end
+";
+
+        Assert.Throws<SemanticException>(() => SemanticTestHelper.Analyze(source));
+    }
+
+    [Fact]
+    public void MethodCallWrongArityThrows()
+    {
+        var source = @"
+class Sample is
+    method OneArg(value: Integer) : Integer => value
+
+    method Use : Integer is
+        return OneArg(Integer(1), Integer(2))
+    end
+end
+";
+
+        Assert.Throws<SemanticException>(() => SemanticTestHelper.Analyze(source));
+    }
+
+    [Fact]
+    public void MethodCallArgumentTypeMismatchThrows()
+    {
+        var source = @"
+class Sample is
+    method OneArg(value: Integer) : Integer => value
+
+    method Use : Integer is
+        return OneArg(Boolean(true))
+    end
+end
+";
+
+        Assert.Throws<SemanticException>(() => SemanticTestHelper.Analyze(source));
+    }
+
+    [Fact]
+    public void IfConditionMustBeBoolean()
+    {
+        var source = @"
+class Sample is
+    method Check is
+        if Integer(1) then
+        end
+    end
+end
+";
+
+        Assert.Throws<SemanticException>(() => SemanticTestHelper.Analyze(source));
+    }
+
+    [Fact]
+    public void WhileConditionMustBeBoolean()
+    {
+        var source = @"
+class Sample is
+    method Loop is
+        while Integer(1) loop
+        end
+    end
+end
+";
+
+        Assert.Throws<SemanticException>(() => SemanticTestHelper.Analyze(source));
+    }
+
+    [Fact]
+    public void DuplicateClassDeclarationThrows()
+    {
+        var source = @"
+class Sample is
+end
+
+class Sample is
+end
+";
+
+        Assert.Throws<SemanticException>(() => SemanticTestHelper.Analyze(source));
+    }
+
+    [Fact]
+    public void MissingBaseClassThrows()
+    {
+        var source = @"
+class Derived extends Missing is
+end
+";
+
+        Assert.Throws<SemanticException>(() => SemanticTestHelper.Analyze(source));
+    }
+
+    [Fact]
+    public void CyclicInheritanceThrows()
+    {
+        var source = @"
+class First extends Second is
+end
+
+class Second extends First is
+end
+";
+
+        Assert.Throws<SemanticException>(() => SemanticTestHelper.Analyze(source));
+    }
+
+    [Fact]
+    public void DuplicateFieldDeclarationThrows()
+    {
+        var source = @"
+class Sample is
+    var value : Integer(1)
+    var value : Integer(2)
+end
+";
+
+        Assert.Throws<SemanticException>(() => SemanticTestHelper.Analyze(source));
+    }
+
+    [Fact]
+    public void DuplicateLocalVariableThrows()
+    {
+        var source = @"
+class Sample is
+    method Use is
+        var value : Integer(1)
+        var value : Integer(2)
+    end
+end
+";
+
+        Assert.Throws<SemanticException>(() => SemanticTestHelper.Analyze(source));
+    }
+
+    [Fact]
+    public void ExpressionBodyWithoutReturnTypeThrows()
+    {
+        var source = @"
+class Sample is
+    method Foo => Integer(1)
+end
+";
+
+        Assert.Throws<SemanticException>(() => SemanticTestHelper.Analyze(source));
+    }
+
+    [Fact]
+    public void DuplicateMethodImplementationThrows()
+    {
+        var source = @"
+class Sample is
+    method Foo : Integer is
+        return Integer(1)
+    end
+
+    method Foo : Integer is
+        return Integer(2)
+    end
+end
+";
+
+        Assert.Throws<SemanticException>(() => SemanticTestHelper.Analyze(source));
+    }
+
+    [Fact]
+    public void MethodReturnTypeMismatchBetweenDeclarationsThrows()
+    {
+        var source = @"
+class Sample is
+    method Foo : Integer
+    method Foo : Real is
+        return Real(1.0)
+    end
+end
+";
+
+        Assert.Throws<SemanticException>(() => SemanticTestHelper.Analyze(source));
+    }
+
+    [Fact]
+    public void DuplicateMethodForwardDeclarationThrows()
+    {
+        var source = @"
+class Sample is
+    method Foo : Integer
+    method Foo : Integer
+end
+";
+
+        Assert.Throws<SemanticException>(() => SemanticTestHelper.Analyze(source));
+    }
+
+    [Fact]
+    public void DuplicateConstructorSignatureThrows()
+    {
+        var source = @"
+class Sample is
+    this(value: Integer) is
+        var tmp : value
+    end
+
+    this(value: Integer) is
+        var tmp : value
+    end
+end
+";
+
+        Assert.Throws<SemanticException>(() => SemanticTestHelper.Analyze(source));
+    }
+
+    [Fact]
+    public void MemberAccessUnknownFieldThrows()
+    {
+        var source = @"
+class Sample is
+    method Use : Integer is
+        return this.Value
+    end
+end
+";
+
+        Assert.Throws<SemanticException>(() => SemanticTestHelper.Analyze(source));
+    }
+
+    [Fact]
+    public void MemberAccessOnOtherClassUnknownFieldThrows()
+    {
+        var source = @"
+class Helper is
+    var value : Integer(1)
+end
+
+class Sample is
+    method Use : Integer is
+        var helper : Helper()
+        return helper.Missing
+    end
+end
+";
+
+        Assert.Throws<SemanticException>(() => SemanticTestHelper.Analyze(source));
+    }
+
+    [Fact]
+    public void ConstructorArgumentMismatchThrows()
+    {
+        var source = @"
+class Sample is
+    this(initial: Integer) is
+        var value : initial
+    end
+
+    method Make is
+        var created : Sample()
+    end
+end
+";
+
+        Assert.Throws<SemanticException>(() => SemanticTestHelper.Analyze(source));
+    }
+
+    [Fact]
+    public void RemovesUnusedLocalVariables()
+    {
+        var source = @"
+class Sample is
+    method Compute : Integer is
+        var keep : Integer(1)
+        var discard : Integer(2)
+        return keep
+    end
+end
+";
+
+        var program = SemanticTestHelper.ParseProgram(source);
+        SemanticTestHelper.Analyze(program);
+
+        var method = Assert.IsType<MethodDeclarationNode>(program.Classes.Single().Members.Single(m => m is MethodDeclarationNode));
+        var body = Assert.IsType<BlockBodyNode>(method.Body);
+
+        Assert.Collection(
+            body.Body.Items,
+            item =>
+            {
+                var local = Assert.IsType<VariableDeclarationNode>(item);
+                Assert.Equal("keep", local.Name);
+            },
+            item => Assert.IsType<ReturnStatementNode>(item));
+    }
+
+    [Fact]
+    public void RemovesUnusedFields()
+    {
+        var source = @"
+class Sample is
+    var keep : Integer(1)
+    var discard : Integer(2)
+
+    method Get : Integer => keep
+end
+";
+
+        var program = SemanticTestHelper.ParseProgram(source);
+        SemanticTestHelper.Analyze(program);
+
+        var members = program.Classes.Single().Members;
+
+        Assert.Collection(
+            members,
+            member =>
+            {
+                var field = Assert.IsType<VariableDeclarationNode>(member);
+                Assert.Equal("keep", field.Name);
+            },
+            member => Assert.IsType<MethodDeclarationNode>(member));
+    }
+
+    [Fact]
+    public void RemovesUnreachableCodeAfterReturn()
+    {
+        var source = @"
+class Sample is
+    method Compute : Integer is
+        return Integer(1)
+        var unreachable : Integer(2)
+        return Integer(2)
+    end
+end
+";
+
+        var program = SemanticTestHelper.ParseProgram(source);
+        SemanticTestHelper.Analyze(program);
+
+        var method = Assert.IsType<MethodDeclarationNode>(program.Classes.Single().Members.Single(m => m is MethodDeclarationNode));
+        var body = Assert.IsType<BlockBodyNode>(method.Body);
+
+        var singleItem = Assert.Single(body.Body.Items);
+        Assert.IsType<ReturnStatementNode>(singleItem);
+    }
+}
