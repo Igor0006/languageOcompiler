@@ -10,13 +10,20 @@ namespace Compiler.Parser
     public sealed class Scanner : AbstractScanner<SemVal, LexLocation>
     {
         private readonly Lexer _lexer;
+        private LexLocation _currentLocation = new LexLocation(1, 1, 1, 1);
+
+        public override LexLocation yylloc
+        {
+            get => _currentLocation;
+            set => _currentLocation = value;
+        }
 
         public Scanner(TextReader reader)
         {
             var src = reader.ReadToEnd();
             _lexer = new Lexer(src);
-            // yyloc contain location of token in text (for error messages)
-            yylloc = new LexLocation(1, 1, 1, 1);
+            // initialize location of token in text (for error messages)
+            yylloc = _currentLocation;
         }
 
         // main method that parser call to get next token

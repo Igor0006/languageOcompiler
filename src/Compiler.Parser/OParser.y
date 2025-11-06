@@ -3,6 +3,7 @@
 %visibility public
 %tokentype Tokens
 %YYSTYPE Compiler.Parser.SemVal
+%partial
 
 %using System;
 %using System.Collections.Generic;
@@ -33,13 +34,13 @@
 program
     : /* empty */
         {
-            var program = new ProgramNode(new List<ClassNode>());
+            var program = AttachLocation(new ProgramNode(new List<ClassNode>()), @$);
             Result = program;
             $$ = program;
         }
     | class_list
         {
-            var program = new ProgramNode($1);
+            var program = AttachLocation(new ProgramNode($1), @$);
             Result = program;
             $$ = program;
         }
@@ -59,11 +60,11 @@ class_list
 class_decl
     : KW_CLASS class_name KW_IS member_list KW_END
         {
-            $$ = new ClassNode($2, null, $4);
+            $$ = AttachLocation(new ClassNode($2, null, $4), @2);
         }
     | KW_CLASS class_name KW_EXTENDS class_name KW_IS member_list KW_END
         {
-            $$ = new ClassNode($2, $4, $6);
+            $$ = AttachLocation(new ClassNode($2, $4, $6), @2);
         }
     ;
 
@@ -94,10 +95,10 @@ member
 var_decl
     : KW_VAR IDENT COLON expr
         {
-            $$ = new VariableDeclarationNode(
+            $$ = AttachLocation(new VariableDeclarationNode(
                     Name: $2.Id,
                     InitialValue: $4
-                 );
+                 ), @2);
         }
     ;
 
@@ -105,7 +106,7 @@ var_decl
 /* ======= TYPES ======= */
 
 type_name
-    : class_name                         { $$ = new TypeNode($1); }
+    : class_name                         { $$ = AttachLocation(new TypeNode($1), @1); }
     | array_type                         { $$ = $1; }
     | list_type                          { $$ = $1; }
     ;
@@ -114,7 +115,7 @@ type_name
 array_type
     : IDENT LBRACKET type_name RBRACKET
         {
-            $$ = new ArrayTypeNode($3);
+            $$ = AttachLocation(new ArrayTypeNode($3), @1);
         }
     ;
 
@@ -122,8 +123,7 @@ array_type
 list_type
     : IDENT LBRACKET type_name RBRACKET
         {
-            
-            $$ = new ListTypeNode($3);
+            $$ = AttachLocation(new ListTypeNode($3), @1);
         }
     ;
 
@@ -137,22 +137,22 @@ list_type
 method_decl
     : KW_METHOD method_name opt_params opt_return_type method_body
         {
-            $$ = new MethodDeclarationNode(
+            $$ = AttachLocation(new MethodDeclarationNode(
                     Name: $2,
                     Parameters: $3,
                     ReturnType: $4,
                     Body: $5
-                 );
+                 ), @1);
         }
     | KW_METHOD method_name opt_params opt_return_type
         {
             /* forward declaration: Body == null */
-            $$ = new MethodDeclarationNode(
+            $$ = AttachLocation(new MethodDeclarationNode(
                     Name: $2,
                     Parameters: $3,
                     ReturnType: $4,
                     Body: null
-                 );
+                 ), @1);
         }
     ;
 
@@ -164,15 +164,9 @@ opt_return_type
     : /* empty */                        { $$ = null; }
     | COLON type_name                    { $$ = $2; }
     ;
-
-type_name
-    : class_name                         { $$ = new TypeNode($1); }
-    ;
-
-
 method_body
-    : KW_IS body KW_END                  { $$ = new BlockBodyNode($2); }
-    | ARROW expr                         { $$ = new ExpressionBodyNode($2); }
+    : KW_IS body KW_END                  { $$ = AttachLocation(new BlockBodyNode($2), @1); }
+    | ARROW expr                         { $$ = AttachLocation(new ExpressionBodyNode($2), @2); }
     ;
 
 /* ======= Constructor =======
@@ -182,10 +176,10 @@ method_body
 ctor_decl
     : KW_THIS opt_params KW_IS body KW_END
         {
-            $$ = new ConstructorDeclarationNode(
+            $$ = AttachLocation(new ConstructorDeclarationNode(
                     Parameters: $2,
                     Body: $4
-                 );
+                 ), @1);
         }
     ;
 
@@ -206,7 +200,7 @@ param_list
     ;
 
 param
-    : IDENT COLON class_name             { $$ = new ParameterNode($1.Id, new TypeNode($3)); }
+    : IDENT COLON class_name             { $$ = AttachLocation(new ParameterNode($1.Id, AttachLocation(new TypeNode($3), @3)), @1); }
     ;
 
 /* ======= Body =======
@@ -215,7 +209,7 @@ param
    Mixed list: local vars and operators. Both implement IBodyItem.
 */
 body
-    : body_items                         { $$ = new BodyNode($1); }
+    : body_items                         { $$ = AttachLocation(new BodyNode($1), @$); }
     ;
 
 body_items
@@ -248,29 +242,29 @@ stmt
 assignment
     : IDENT ASSIGN expr
         {
-            var lhs = new IdentifierNode($1.Id);
-            $$ = new AssignmentNode(lhs, $3);
+            var lhs = AttachLocation(new IdentifierNode($1.Id), @1);
+            $$ = AttachLocation(new AssignmentNode(lhs, $3), @1);
         }
     ;
 
 /* WhileLoop : while Expression loop Body end */
 while_stmt
     : KW_WHILE expr KW_LOOP body KW_END
-        { $$ = new WhileLoopNode($2, $4); }
+        { $$ = AttachLocation(new WhileLoopNode($2, $4), @1); }
     ;
 
 /* IfStatement : if Expression then Body [ else Body ] end */
 if_stmt
     : KW_IF expr KW_THEN body KW_END
-        { $$ = new IfStatementNode($2, $4, null); }
+        { $$ = AttachLocation(new IfStatementNode($2, $4, null), @1); }
     | KW_IF expr KW_THEN body KW_ELSE body KW_END
-        { $$ = new IfStatementNode($2, $4, $6); }
+        { $$ = AttachLocation(new IfStatementNode($2, $4, $6), @1); }
     ;
 
 /* ReturnStatement : return [ Expression ] */
 return_stmt
-    : KW_RETURN                          { $$ = new ReturnStatementNode(null); }
-    | KW_RETURN expr                     { $$ = new ReturnStatementNode($2); }
+    : KW_RETURN                          { $$ = AttachLocation(new ReturnStatementNode(null), @1); }
+    | KW_RETURN expr                     { $$ = AttachLocation(new ReturnStatementNode($2), @1); }
     ;
 
 /* ======= Expression =======
@@ -302,44 +296,44 @@ call_or_access
     | call_or_access DOT IDENT
         {
             /* member access: a.b  */
-            $$ = new MemberAccessNode($1, $3.Id);
+            $$ = AttachLocation(new MemberAccessNode($1, $3.Id), @3);
         }
     | call_or_access LPAREN RPAREN
         {
             /* call without arguments: f() or a.b() */
-            $$ = new CallNode($1, new List<Expression>());
+            $$ = AttachLocation(new CallNode($1, new List<Expression>()), @2);
         }
     | call_or_access LPAREN arg_list RPAREN
         {
             /* call with arguments: f(x, y) или a.b(x) */
-            $$ = new CallNode($1, $3);
+            $$ = AttachLocation(new CallNode($1, $3), @2);
         }
     ;
 
 /* ConstructorInvokation : ClassName [ Arguments ] */
 constructor_invocation
     : class_name LPAREN RPAREN
-        { $$ = new ConstructorCallNode($1, new List<Expression>()); }
+        { $$ = AttachLocation(new ConstructorCallNode($1, new List<Expression>()), @1); }
     | class_name LPAREN arg_list RPAREN
-        { $$ = new ConstructorCallNode($1, $3); }
+        { $$ = AttachLocation(new ConstructorCallNode($1, $3), @1); }
     | IDENT LBRACKET type_name RBRACKET LPAREN RPAREN
         { 
             
             if ($1 == "Array")
-                $$ = new ConstructorCallNode("Array", new List<Expression>());
+                $$ = AttachLocation(new ConstructorCallNode("Array", new List<Expression>()), @1);
             else if ($1 == "List")
-                $$ = new ConstructorCallNode("List", new List<Expression>());
+                $$ = AttachLocation(new ConstructorCallNode("List", new List<Expression>()), @1);
             else
-                $$ = new ConstructorCallNode($1, new List<Expression>());
+                $$ = AttachLocation(new ConstructorCallNode($1, new List<Expression>()), @1);
         }
     | IDENT LBRACKET type_name RBRACKET LPAREN arg_list RPAREN
         { 
             if ($1 == "Array")
-                $$ = new ConstructorCallNode("Array", $6);
+                $$ = AttachLocation(new ConstructorCallNode("Array", $6), @1);
             else if ($1 == "List")
-                $$ = new ConstructorCallNode("List", $6);
+                $$ = AttachLocation(new ConstructorCallNode("List", $6), @1);
             else
-                $$ = new ConstructorCallNode($1, $6);
+                $$ = AttachLocation(new ConstructorCallNode($1, $6), @1);
         }
     ;
 
@@ -359,11 +353,11 @@ arg_list
      IntegerLiteral | RealLiteral | BooleanLiteral | this
 */
 primary
-    : INT_LITERAL                        { $$ = new IntegerLiteralNode($1.Int); }
-    | REAL_LITERAL                       { $$ = new RealLiteralNode($1.Real); }
-    | BOOL_LITERAL                       { $$ = new BooleanLiteralNode($1.Bool); }
-    | KW_THIS                            { $$ = new ThisNode(); }
-    | IDENT                              { $$ = new IdentifierNode($1.Id); }
+    : INT_LITERAL                        { $$ = AttachLocation(new IntegerLiteralNode($1.Int), @1); }
+    | REAL_LITERAL                       { $$ = AttachLocation(new RealLiteralNode($1.Real), @1); }
+    | BOOL_LITERAL                       { $$ = AttachLocation(new BooleanLiteralNode($1.Bool), @1); }
+    | KW_THIS                            { $$ = AttachLocation(new ThisNode(), @1); }
+    | IDENT                              { $$ = AttachLocation(new IdentifierNode($1.Id), @1); }
     ;
 
 %%
